@@ -40,10 +40,29 @@
             <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                 <span id="sync-status" class="px-3 py-1 bg-amber-900 text-amber-300 text-xs rounded-full font-medium animate-pulse">Connexion Firebase...</span>
                 <button id="logout-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-xs text-gray-300 px-3 py-1.5 rounded transition cursor-pointer">
-                    Deconnexion 🚪
+                    Déconnexion 🚪
                 </button>
             </div>
         </header>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl shadow-md">
+                <span class="block text-xs text-gray-400 uppercase font-bold">Total Vols</span>
+                <span id="stats-total-vols" class="text-2xl font-bold text-white">0</span>
+            </div>
+            <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl shadow-md">
+                <span class="block text-xs text-gray-400 uppercase font-bold">Heures de Vol</span>
+                <span id="stats-total-heures" class="text-2xl font-bold text-red-400">00h00</span>
+            </div>
+            <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl shadow-md">
+                <span class="block text-xs text-gray-400 uppercase font-bold">Missions Primaires</span>
+                <span id="stats-total-primaires" class="text-2xl font-bold text-amber-500">0</span>
+            </div>
+            <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl shadow-md">
+                <span class="block text-xs text-gray-400 uppercase font-bold">En cours / Alerte</span>
+                <span id="stats-total-encours" class="text-2xl font-bold text-green-400">0</span>
+            </div>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700 h-fit">
@@ -60,8 +79,8 @@
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Indicatif & Machine</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="callsign" placeholder="ex: SAMU 75" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500 focus:outline-none">
-                            <input type="text" id="immat" placeholder="ex: F-HEMS" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500 focus:outline-none">
+                            <input type="text" id="callsign" placeholder="ex: SAMU 75" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500 focus:outline-none">
+                            <input type="text" id="immat" placeholder="ex: F-HEMS" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500 focus:outline-none">
                         </div>
                     </div>
 
@@ -78,8 +97,8 @@
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Itinéraire</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="dep" placeholder="Départ" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
-                            <input type="text" id="dest" placeholder="Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
+                            <input type="text" id="dep" placeholder="Départ" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500">
+                            <input type="text" id="dest" placeholder="Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500">
                         </div>
                     </div>
 
@@ -105,11 +124,11 @@
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Horaires (Décollage & Posé)</label>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <span class="text-[10px] text-gray-400">Décollage</span>
+                                <span class="text-[10px] text-gray-400 flex justify-between">Décollage <button type="button" class="set-now-time text-red-400 hover:text-white" data-target="time-takeoff">⏱️</button></span>
                                 <input type="time" id="time-takeoff" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                             <div>
-                                <span class="text-[10px] text-gray-400">Atterrissage (Fin)</span>
+                                <span class="text-[10px] text-gray-400 flex justify-between">Atterrissage <button type="button" class="set-now-time text-red-400 hover:text-white" data-target="time-landing">⏱️</button></span>
                                 <input type="time" id="time-landing" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                         </div>
@@ -278,6 +297,7 @@
                 syncStatus.textContent = "✓ Connecté au Serveur EMS";
                 syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
                 renderFlights(localFlightsCache);
+                calculateDashboardStats(localFlightsCache);
             }, (error) => {
                 console.error("Erreur Firebase: ", error);
                 syncStatus.textContent = "⚠️ Erreur Synchro";
@@ -285,17 +305,57 @@
             });
         }
 
-        function calculateDuration(start, end) {
-            if (!start || !end) return "En cours...";
+        // --- FONCTIONS PRATIQUES ET UI ---
+
+        // Raccourci pour assigner l'heure courante (HH:MM)
+        document.querySelectorAll('.set-now-time').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const targetId = e.currentTarget.getAttribute('data-target');
+                const now = new Date();
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                document.getElementById(targetId).value = `${hours}:${minutes}`;
+            });
+        });
+
+        function calculateMinutes(start, end) {
+            if (!start || !end) return 0;
             const [sh, sm] = start.split(':').map(Number);
             const [eh, em] = end.split(':').map(Number);
-            
-            let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
-            if (diffMinutes < 0) diffMinutes += 24 * 60;
-            
+            let diff = (eh * 60 + em) - (sh * 60 + sm);
+            if (diff < 0) diff += 24 * 60; // Gère le passage de minuit
+            return diff;
+        }
+
+        function calculateDuration(start, end) {
+            if (!start || !end) return "En cours...";
+            const diffMinutes = calculateMinutes(start, end);
             const h = Math.floor(diffMinutes / 60);
             const m = diffMinutes % 60;
             return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+        }
+
+        function calculateDashboardStats(flights) {
+            let totalMinutes = 0;
+            let totalPrimaires = 0;
+            let totalEnCours = 0;
+
+            flights.forEach(f => {
+                if (f.takeoff && f.landing) {
+                    totalMinutes += calculateMinutes(f.takeoff, f.landing);
+                } else {
+                    totalEnCours++;
+                }
+                if (f.mission === 'Primaire') totalPrimaires++;
+            });
+
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+
+            document.getElementById('stats-total-vols').textContent = flights.length;
+            document.getElementById('stats-total-heures').textContent = `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+            document.getElementById('stats-total-primaires').textContent = totalPrimaires;
+            document.getElementById('stats-total-encours').textContent = totalEnCours;
         }
 
         function renderFlights(flights) {
@@ -402,7 +462,6 @@
                 syncStatus.textContent = "Suppression...";
                 try {
                     await deleteDoc(doc(db, "vols", id));
-                    // Si l'utilisateur était en train de modifier le dossier supprimé, on reset le formulaire
                     if (flightIdInput.value === id) {
                         resetForm();
                     }
@@ -437,12 +496,13 @@
             const originalAuthor = document.getElementById('flight-author').value;
             const flightAuthor = currentId ? originalAuthor : (currentUser ? currentUser.name : "Inconnu");
 
+            // Forçage de la mise en majuscule des chaînes texte avant l'envoi
             const flightData = {
-                callsign: document.getElementById('callsign').value,
-                immat: document.getElementById('immat').value,
+                callsign: document.getElementById('callsign').value.trim().toUpperCase(),
+                immat: document.getElementById('immat').value.trim().toUpperCase(),
                 mission: document.getElementById('mission-type').value,
-                dep: document.getElementById('dep').value,
-                dest: document.getElementById('dest').value,
+                dep: document.getElementById('dep').value.trim().toUpperCase(),
+                dest: document.getElementById('dest').value.trim().toUpperCase(),
                 pnt: document.getElementById('pob-pnt').value,
                 med: document.getElementById('pob-med').value,
                 pax: document.getElementById('pob-pax').value,
