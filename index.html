@@ -8,33 +8,40 @@
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
 
-    <div class="max-w-6xl mx-auto p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto p-4 sm:p-6">
         <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-red-500 tracking-wide">🚁 HÉLI-SMUR</h1>
-                <p class="text-sm text-gray-400">Registre opérationnel des vols EMS</p>
+                <p class="text-sm text-gray-400">Registre opérationnel - Option Modification Active</p>
             </div>
             <div class="text-right">
-                <span id="connection-status" class="px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium">Mode Local Actif</span>
+                <span class="px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium">Sauvegarde Auto</span>
             </div>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700 h-fit">
-                <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">Nouveau Vol</h2>
+                <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                    <h2 id="form-title" class="text-xl font-semibold text-white">Nouveau Vol</h2>
+                    <button id="cancel-edit-btn" class="hidden text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-2 py-1 rounded cursor-pointer">
+                        Annuler
+                    </button>
+                </div>
+                
                 <form id="flight-form" class="space-y-4">
+                    <input type="hidden" id="flight-id">
                     
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Indicatif & Machine</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="callsign" placeholder="ex: SAMU 75" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
-                            <input type="text" id="immat" placeholder="ex: F-HEMS" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="text" id="callsign" placeholder="ex: SAMU 75" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500 focus:outline-none">
+                            <input type="text" id="immat" placeholder="ex: F-HEMS" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500 focus:outline-none">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Raison du vol (Mission)</label>
-                        <select id="mission-type" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                        <select id="mission-type" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
                             <option value="Primaire">Primaire (Intervention site)</option>
                             <option value="Secondaire">Secondaire (Transfert Hôpital)</option>
                             <option value="Technique">Vol Technique / Entraînement</option>
@@ -45,8 +52,8 @@
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Itinéraire</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="dep" placeholder="Départ (OACI/DZ)" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
-                            <input type="text" id="dest" placeholder="Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="text" id="dep" placeholder="Départ" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
+                            <input type="text" id="dest" placeholder="Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
                         </div>
                     </div>
 
@@ -69,35 +76,36 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Horaires (UTC ou Local)</label>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Horaires (Décollage & Posé)</label>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <span class="text-[10px] text-gray-400">Décollage</span>
-                                <input type="time" id="time-takeoff" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
+                                <input type="time" id="time-takeoff" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                             <div>
-                                <span class="text-[10px] text-gray-400">Atterrissage</span>
-                                <input type="time" id="time-landing" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
+                                <span class="text-[10px] text-gray-400">Atterrissage (Fin)</span>
+                                <input type="time" id="time-landing" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                         </div>
+                        <p class="text-[11px] text-gray-500 mt-1">Astuce : Laissez l'atterrissage vide si le vol est en cours, modifiez-le au retour.</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Carburant (L ou kg)</label>
-                            <input type="number" id="fuel" placeholder="Restant" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Carburant restant</label>
+                            <input type="number" id="fuel" placeholder="Litres/Kg" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
                         </div>
                         <div>
                             <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Condition</label>
                             <select id="flight-condition" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
-                                <option value="Jour">Jour (VFR)</option>
+                                <option value="Running">Jour (VFR)</option>
                                 <option value="Nuit">Nuit (VFR/IFR)</option>
-                                <option value="JVN">JVN (Jumelles Nuit)</option>
+                                <option value="JVN">JVN (Jumelles)</option>
                             </select>
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition duration-200 shadow-md cursor-pointer">
+                    <button type="submit" id="submit-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition duration-200 cursor-pointer shadow-md">
                         Enregistrer le Vol
                     </button>
                 </form>
@@ -105,8 +113,8 @@
 
             <div class="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
                 <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                    <h2 class="text-xl font-semibold text-white">Registre des Vols (<span id="flight-count">0</span>)</h2>
-                    <button id="clear-btn" class="text-xs bg-gray-700 hover:bg-red-900 text-gray-300 hover:text-white px-3 py-1 rounded transition cursor-pointer">
+                    <h2 class="text-xl font-semibold text-white">Rapports Enregistrés</h2>
+                    <button id="clear-btn" class="text-xs bg-gray-700 hover:bg-red-950 text-gray-300 hover:text-white px-3 py-1 rounded transition cursor-pointer">
                         Effacer tout
                     </button>
                 </div>
@@ -115,13 +123,13 @@
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-900 text-gray-400 uppercase text-[11px] tracking-wider border-b border-gray-700">
-                                <th class="p-3">Indicatif/Immat</th>
+                                <th class="p-3">Appareil</th>
                                 <th class="p-3">Mission</th>
                                 <th class="p-3">Parcours</th>
-                                <th class="p-3">POB Total</th>
+                                <th class="p-3">POB</th>
                                 <th class="p-3">Horaires</th>
                                 <th class="p-3">Durée</th>
-                                <th class="p-3">Cond.</th>
+                                <th class="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="flights-table-body" class="divide-y divide-gray-700 text-sm">
@@ -129,7 +137,7 @@
                     </table>
                 </div>
                 <div id="empty-state" class="text-center py-12 text-gray-500">
-                    Aucun vol enregistré pour le moment.
+                    Aucun rapport pour le moment.
                 </div>
             </div>
         </div>
@@ -140,28 +148,78 @@
             const flightForm = document.getElementById('flight-form');
             const tableBody = document.getElementById('flights-table-body');
             const emptyState = document.getElementById('empty-state');
-            const flightCount = document.getElementById('flight-count');
             const clearBtn = document.getElementById('clear-btn');
+            
+            // Éléments d'édition
+            const formTitle = document.getElementById('form-title');
+            const submitBtn = document.getElementById('submit-btn');
+            const cancelEditBtn = document.getElementById('cancel-edit-btn');
+            const flightIdInput = document.getElementById('flight-id');
 
-            // Charger les vols sauvegardés au démarrage
             let flights = JSON.parse(localStorage.getItem('ems_flights')) || [];
 
             function calculateDuration(start, end) {
-                if (!start || !end) return "--:--";
+                if (!start || !end) return "En cours...";
                 const [sh, sm] = start.split(':').map(Number);
                 const [eh, em] = end.split(':').map(Number);
                 
                 let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
-                if (diffMinutes < 0) diffMinutes += 24 * 60; // Gestion passage de minuit
+                if (diffMinutes < 0) diffMinutes += 24 * 60; // Passage de minuit
                 
                 const h = Math.floor(diffMinutes / 60);
                 const m = diffMinutes % 60;
                 return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
             }
 
+            window.editFlight = function(id) {
+                const flight = flights.find(f => f.id === id);
+                if (!flight) return;
+
+                // Remplir le formulaire avec l'ancien rapport
+                flightIdInput.value = flight.id;
+                document.getElementById('callsign').value = flight.callsign;
+                document.getElementById('immat').value = flight.immat;
+                document.getElementById('mission-type').value = flight.mission;
+                document.getElementById('dep').value = flight.dep;
+                document.getElementById('dest').value = flight.dest;
+                document.getElementById('pob-pnt').value = flight.pnt;
+                document.getElementById('pob-med').value = flight.med;
+                document.getElementById('pob-pax').value = flight.pax;
+                document.getElementById('time-takeoff').value = flight.takeoff;
+                document.getElementById('time-landing').value = flight.landing; // Permet de mettre l'heure de fin ici
+                document.getElementById('fuel').value = flight.fuel;
+                document.getElementById('flight-condition').value = flight.condition;
+
+                // Changer le style du formulaire pour montrer qu'on est en édition
+                formTitle.textContent = "Modifier le Rapport";
+                formTitle.className = "text-xl font-semibold text-amber-400";
+                submitBtn.textContent = "Mettre à jour le vol";
+                submitBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
+                cancelEditBtn.classList.remove('hidden');
+                
+                // Scroll fluide vers le formulaire (pratique sur mobile)
+                formTitle.scrollIntoView({ behavior: 'smooth' });
+            };
+
+            function resetForm() {
+                flightForm.reset();
+                flightIdInput.value = '';
+                formTitle.textContent = "Nouveau Vol";
+                formTitle.className = "text-xl font-semibold text-white";
+                submitBtn.textContent = "Enregistrer le Vol";
+                submitBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
+                cancelEditBtn.classList.add('hidden');
+                
+                // Valeurs par défaut
+                document.getElementById('pob-pnt').value = 1;
+                document.getElementById('pob-med').value = 2;
+                document.getElementById('pob-pax').value = 1;
+            }
+
+            cancelEditBtn.addEventListener('click', resetForm);
+
             function renderFlights() {
                 tableBody.innerHTML = '';
-                flightCount.textContent = flights.length;
 
                 if (flights.length === 0) {
                     emptyState.classList.remove('hidden');
@@ -172,17 +230,23 @@
                 flights.forEach((flight) => {
                     const duration = calculateDuration(flight.takeoff, flight.landing);
                     const totalPob = parseInt(flight.pnt) + parseInt(flight.med) + parseInt(flight.pax);
-                    
+                    const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
+                    const isEnCours = !flight.landing;
+
                     const row = document.createElement('tr');
-                    row.className = "hover:bg-gray-700/50 transition-colors";
+                    row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/20 border-l-4 border-l-red-500' : ''}`;
                     row.innerHTML = `
                         <td class="p-3 font-medium text-white">${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span></td>
                         <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMissionBadgeClass(flight.mission)}">${flight.mission}</span></td>
                         <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
                         <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
-                        <td class="p-3 text-xs text-gray-300">${flight.takeoff} - ${flight.landing}</td>
-                        <td class="p-3 font-bold text-red-400">${duration}</td>
-                        <td class="p-3"><span class="text-xs text-gray-400">${flight.condition}</span></td>
+                        <td class="p-3 text-xs text-gray-300">${flight.takeoff || '??'} - <span class="${isEnCours ? 'text-red-400 font-bold animate-pulse' : ''}">${displayLanding}</span></td>
+                        <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
+                        <td class="p-3 text-right">
+                            <button onclick="editFlight(${flight.id})" class="bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-3 rounded text-xs transition cursor-pointer">
+                                📝 ${isEnCours ? 'Compléter' : 'Modifier'}
+                            </button>
+                        </td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -197,12 +261,12 @@
                 }
             }
 
-            // Soumission du formulaire
             flightForm.addEventListener('submit', (e) => {
                 e.preventDefault();
 
-                const newFlight = {
-                    id: Date.now(),
+                const currentId = flightIdInput.value;
+
+                const flightData = {
                     callsign: document.getElementById('callsign').value,
                     immat: document.getElementById('immat').value,
                     mission: document.getElementById('mission-type').value,
@@ -217,27 +281,32 @@
                     condition: document.getElementById('flight-condition').value
                 };
 
-                flights.unshift(newFlight); // Ajoute le vol en haut de la liste
+                if (currentId) {
+                    // MODE MODIFICATION : On met à jour le vol existant
+                    const index = flights.findIndex(f => f.id == currentId);
+                    if (index !== -1) {
+                        flights[index] = { ...flights[index], ...flightData };
+                    }
+                } else {
+                    // MODE CRÉATION : On ajoute un nouveau vol
+                    flightData.id = Date.now();
+                    flights.unshift(flightData);
+                }
+
                 localStorage.setItem('ems_flights', JSON.stringify(flights));
-                
                 renderFlights();
-                flightForm.reset();
-                // Remettre les POB par défaut après reset
-                document.getElementById('pob-pnt').value = 1;
-                document.getElementById('pob-med').value = 2;
-                document.getElementById('pob-pax').value = 1;
+                resetForm();
             });
 
-            // Bouton pour tout vider
             clearBtn.addEventListener('click', () => {
                 if (confirm('Voulez-vous vraiment effacer tout l\'historique des vols ?')) {
                     flights = [];
                     localStorage.removeItem('ems_flights');
                     renderFlights();
+                    resetForm();
                 }
             });
 
-            // Initialisation
             renderFlights();
         });
     </script>
