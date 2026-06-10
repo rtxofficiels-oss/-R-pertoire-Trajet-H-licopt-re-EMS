@@ -3,19 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMS Helilog - Registre des Vols (Firebase)</title>
+    <title>EMS Helilog - Registre des Vols (Sécurisé)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
 
-    <div class="max-w-7xl mx-auto p-4 sm:p-6">
-        <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-center">
+    <div id="login-screen" class="fixed inset-0 bg-gray-950 flex items-center justify-center z-50">
+        <div class="bg-gray-800 p-8 rounded-xl shadow-2xl border border-gray-700 w-full max-w-md mx-4">
+            <div class="text-center mb-6">
+                <h2 class="text-3xl font-bold text-red-500 tracking-wide">🚁 HÉLI-SMUR</h2>
+                <p class="text-sm text-gray-400 mt-1">Connexion à la base opérationnelle</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Identifiant (ID)</label>
+                    <input type="text" id="login-username" required placeholder="ex: pilote01" class="w-full bg-gray-700 border border-gray-600 rounded p-2.5 text-white focus:border-red-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Mot de passe (MDT)</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-gray-700 border border-gray-600 rounded p-2.5 text-white focus:border-red-500 focus:outline-none">
+                </div>
+                <div id="login-error" class="text-red-400 text-sm font-medium hidden">⚠️ ID ou Mot de passe incorrect</div>
+                <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded transition duration-200 cursor-pointer shadow-md">
+                    Se connecter
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-screen" class="hidden max-w-7xl mx-auto p-4 sm:p-6">
+        <header class="mb-8 border-b border-gray-800 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-red-500 tracking-wide">🚁 HÉLI-SMUR</h1>
-                <p class="text-sm text-gray-400">Registre opérationnel - Connecté à Firebase Cloud</p>
+                <p class="text-sm text-gray-400">Registre Cloud — Membre connecté : <span id="user-display-name" class="text-white font-bold">...</span></p>
             </div>
-            <div class="text-right">
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
                 <span id="sync-status" class="px-3 py-1 bg-amber-900 text-amber-300 text-xs rounded-full font-medium animate-pulse">Connexion Firebase...</span>
+                <button id="logout-btn" class="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-xs text-gray-300 px-3 py-1.5 rounded transition cursor-pointer">
+                    Deconnexion 🚪
+                </button>
             </div>
         </header>
 
@@ -104,6 +130,8 @@
                         </div>
                     </div>
 
+                    <input type="hidden" id="flight-author">
+
                     <button type="submit" id="submit-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition duration-200 cursor-pointer shadow-md">
                         Enregistrer le Vol
                     </button>
@@ -124,7 +152,7 @@
                                 <th class="p-3">Parcours</th>
                                 <th class="p-3">POB</th>
                                 <th class="p-3">Horaires</th>
-                                <th class="p-3">Durée</th>
+                                <th class="p-3">Auteur</th>
                                 <th class="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -146,7 +174,16 @@
             getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Votre configuration Firebase fournie
+        // CONFIGURATION DES UTILISATEURS (ID et MDT)
+        // Vous pouvez modifier la liste ci-dessous pour ajouter vos pilotes / EMS
+        const USERS_DATABASE = {
+            "pilote01": { mdt: "hems2026", name: "Cpt. Dupont (Pilote)" },
+            "pilote02": { mdt: "rotor99", name: "Cpt. Martin (Pilote)" },
+            "ems01": { mdt: "samu75", name: "Dr. Lemoine (Médical)" },
+            "admin": { mdt: "admin123", name: "Superviseur Base" }
+        };
+
+        // Votre configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBn_d1xloVLLtQ8MS5w82kNt3AydNpRfJo",
             authDomain: "ems-helilog.firebaseapp.com",
@@ -162,7 +199,14 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // Sélection des éléments HTML
+        // Sélection des éléments HTML principaux
+        const loginScreen = document.getElementById('login-screen');
+        const appScreen = document.getElementById('app-screen');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const userDisplayName = document.getElementById('user-display-name');
+        const logoutBtn = document.getElementById('logout-btn');
+
         const flightForm = document.getElementById('flight-form');
         const tableBody = document.getElementById('flights-table-body');
         const emptyState = document.getElementById('empty-state');
@@ -172,28 +216,75 @@
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
         const flightIdInput = document.getElementById('flight-id');
 
+        let currentUser = null;
         let localFlightsCache = [];
 
-        // Récupération des données en temps réel depuis Firebase Cloud Firestore
-        const q = query(collection(db, "vols"), orderBy("timestamp", "desc"));
+        // --- LOGIQUE DE GESTION DES UTILISATEURS ---
         
-        onSnapshot(q, (snapshot) => {
-            localFlightsCache = [];
-            snapshot.forEach((doc) => {
-                localFlightsCache.push({ id: doc.id, ...doc.data() });
-            });
-            
-            // Mise à jour de l'interface
-            syncStatus.textContent = "✓ Connecté au Cloud";
-            syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
-            renderFlights(localFlightsCache);
-        }, (error) => {
-            console.error("Erreur Firebase: ", error);
-            syncStatus.textContent = "⚠️ Erreur Synchro";
-            syncStatus.className = "px-3 py-1 bg-red-900 text-red-300 text-xs rounded-full font-medium";
+        // Vérifier si un utilisateur était déjà connecté auparavant
+        const savedUserToken = localStorage.getItem('logged_ems_user');
+        if (savedUserToken && USERS_DATABASE[savedUserToken]) {
+            connectUser(savedUserToken);
+        }
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const mdt = document.getElementById('login-password').value;
+
+            if (USERS_DATABASE[username] && USERS_DATABASE[username].mdt === mdt) {
+                // Identifiants corrects !
+                localStorage.setItem('logged_ems_user', username);
+                loginError.classList.add('hidden');
+                loginForm.reset();
+                connectUser(username);
+            } else {
+                // Erreur de saisie
+                loginError.classList.remove('hidden');
+            }
         });
 
-        // Calcul de la durée du vol
+        function connectUser(username) {
+            currentUser = USERS_DATABASE[username];
+            userDisplayName.textContent = currentUser.name;
+            
+            // Masquer l'écran de connexion et afficher l'application
+            loginScreen.classList.add('hidden');
+            appScreen.classList.remove('hidden');
+            
+            // Initialiser l'écoute en temps réel Firebase Firestore
+            startFirebaseListener();
+        }
+
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('logged_ems_user');
+            currentUser = null;
+            appScreen.classList.add('hidden');
+            loginScreen.classList.remove('hidden');
+        });
+
+
+        // --- LOGIQUE BASE DE DONNÉES FIREBASE ---
+
+        function startFirebaseListener() {
+            const q = query(collection(db, "vols"), orderBy("timestamp", "desc"));
+            
+            onSnapshot(q, (snapshot) => {
+                localFlightsCache = [];
+                snapshot.forEach((doc) => {
+                    localFlightsCache.push({ id: doc.id, ...doc.data() });
+                });
+                
+                syncStatus.textContent = "✓ Connecté au Cloud";
+                syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
+                renderFlights(localFlightsCache);
+            }, (error) => {
+                console.error("Erreur Firebase: ", error);
+                syncStatus.textContent = "⚠️ Erreur Synchro";
+                syncStatus.className = "px-3 py-1 bg-red-900 text-red-300 text-xs rounded-full font-medium";
+            });
+        }
+
         function calculateDuration(start, end) {
             if (!start || !end) return "En cours...";
             const [sh, sm] = start.split(':').map(Number);
@@ -207,7 +298,6 @@
             return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
         }
 
-        // Affichage des données dans le tableau HTML
         function renderFlights(flights) {
             tableBody.innerHTML = '';
 
@@ -222,6 +312,7 @@
                 const totalPob = parseInt(flight.pnt) + parseInt(flight.med) + parseInt(flight.pax);
                 const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
                 const isEnCours = !flight.landing;
+                const authorName = flight.author ? flight.author.split(' ')[0] : 'Inconnu';
 
                 const row = document.createElement('tr');
                 row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/20 border-l-4 border-l-red-500' : ''}`;
@@ -231,6 +322,7 @@
                     <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
                     <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
                     <td class="p-3 text-xs text-gray-300">${flight.takeoff || '??'} - <span class="${isEnCours ? 'text-red-400 font-bold animate-pulse' : ''}">${displayLanding}</span></td>
+                    <td class="p-3 text-xs font-medium text-gray-400 italic">${authorName}</td>
                     <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
                     <td class="p-3 text-right">
                         <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-3 rounded text-xs transition cursor-pointer">
@@ -241,7 +333,6 @@
                 tableBody.appendChild(row);
             });
 
-            // Attacher les événements sur les boutons de modification
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = e.target.getAttribute('data-id');
@@ -259,7 +350,6 @@
             }
         }
 
-        // Préparer le formulaire pour la modification
         function editFlight(id) {
             const flight = localFlightsCache.find(f => f.id === id);
             if (!flight) return;
@@ -277,6 +367,7 @@
             document.getElementById('time-landing').value = flight.landing;
             document.getElementById('fuel').value = flight.fuel;
             document.getElementById('flight-condition').value = flight.condition;
+            document.getElementById('flight-author').value = flight.author || '';
 
             formTitle.textContent = "Modifier le Rapport Cloud";
             formTitle.className = "text-xl font-semibold text-amber-400";
@@ -303,12 +394,15 @@
 
         cancelEditBtn.addEventListener('click', resetForm);
 
-        // Envoi ou Mise à jour des données dans Firebase Firestore
         flightForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             syncStatus.textContent = "Envoi...";
 
             const currentId = flightIdInput.value;
+
+            // Garder l'auteur d'origine si c'est une modification, ou mettre le membre connecté si c'est un nouveau rapport
+            const originalAuthor = document.getElementById('flight-author').value;
+            const flightAuthor = currentId ? originalAuthor : currentUser.name;
 
             const flightData = {
                 callsign: document.getElementById('callsign').value,
@@ -323,22 +417,21 @@
                 landing: document.getElementById('time-landing').value,
                 fuel: document.getElementById('fuel').value,
                 condition: document.getElementById('flight-condition').value,
-                timestamp: Date.now() // Utilisé pour trier l'affichage (du plus récent au plus ancien)
+                author: flightAuthor,
+                timestamp: Date.now()
             };
 
             try {
                 if (currentId) {
-                    // Si l'ID existe, on met à jour le document correspondant dans Firebase
                     const flightRef = doc(db, "vols", currentId);
                     await updateDoc(flightRef, flightData);
                 } else {
-                    // Sinon, on crée une nouvelle entrée (un nouveau document)
                     await addDoc(collection(db, "vols"), flightData);
                 }
                 resetForm();
             } catch (error) {
-                console.error("Erreur lors de la sauvegarde :", error);
-                alert("Erreur de sauvegarde Cloud. Vérifiez les règles Firestore.");
+                console.error("Erreur de sauvegarde :", error);
+                alert("Erreur Cloud. Vérifiez votre connexion.");
             }
         });
     </script>
