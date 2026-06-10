@@ -76,10 +76,10 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Itinéraire Global</label>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Itinéraire</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="dep" placeholder="Base / Hôpital Départ" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
-                            <input type="text" id="dest" placeholder="Hôpital Retour / Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
+                            <input type="text" id="dep" placeholder="Départ" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
+                            <input type="text" id="dest" placeholder="Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500">
                         </div>
                     </div>
 
@@ -101,29 +101,15 @@
                         </div>
                     </div>
 
-                    <div class="p-3 bg-gray-900/50 border border-gray-700 rounded-lg">
-                        <span class="block text-xs font-bold uppercase text-red-400 mb-2">🛫 Phase 1 : Aller (Vers Site)</span>
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Horaires (Décollage & Posé)</label>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <span class="text-[10px] text-gray-400">Décollage Hôpital</span>
+                                <span class="text-[10px] text-gray-400">Décollage</span>
                                 <input type="time" id="time-takeoff" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                             <div>
-                                <span class="text-[10px] text-gray-400">Posé sur Zone</span>
-                                <input type="time" id="time-landing-site" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="p-3 bg-gray-900/50 border border-gray-700 rounded-lg">
-                        <span class="block text-xs font-bold uppercase text-blue-400 mb-2">🛬 Phase 2 : Retour (Vers Hôpital)</span>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <span class="text-[10px] text-gray-400">Décollage Zone</span>
-                                <input type="time" id="time-takeoff-site" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
-                            </div>
-                            <div>
-                                <span class="text-[10px] text-gray-400">Posé Hôpital (Fin)</span>
+                                <span class="text-[10px] text-gray-400">Atterrissage (Fin)</span>
                                 <input type="time" id="time-landing" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                         </div>
@@ -142,11 +128,6 @@
                                 <option value="JVN">JVN (Jumelles)</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Commentaires / Remarques de fin de mission</label>
-                        <textarea id="flight-comments" rows="2" placeholder="RAS, Météo difficile, Patient instable..." class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-sm focus:border-red-500 focus:outline-none resize-none"></textarea>
                     </div>
 
                     <input type="hidden" id="flight-author">
@@ -170,8 +151,9 @@
                                 <th class="p-3">Mission</th>
                                 <th class="p-3">Parcours</th>
                                 <th class="p-3">POB</th>
-                                <th class="p-3">Chronologie</th>
-                                <th class="p-3">Total Bloc</th>
+                                <th class="p-3">Horaires</th>
+                                <th class="p-3">Auteur</th>
+                                <th class="p-3">Durée</th>
                                 <th class="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -234,6 +216,7 @@
         let unsubscribeFirebase = null;
 
         // --- GESTION DES SESSIONS ---
+        
         const savedUserToken = localStorage.getItem('logged_ems_user');
         if (savedUserToken && USERS_DATABASE[savedUserToken]) {
             connectUser(savedUserToken);
@@ -257,8 +240,10 @@
         function connectUser(username) {
             currentUser = USERS_DATABASE[username];
             userDisplayName.textContent = currentUser.name;
+            
             loginScreen.classList.add('hidden');
             appScreen.classList.remove('hidden');
+            
             startFirebaseListener();
         }
 
@@ -272,11 +257,13 @@
             localFlightsCache = [];
             tableBody.innerHTML = '';
             emptyState.classList.remove('hidden');
+            
             appScreen.classList.add('hidden');
             loginScreen.classList.remove('hidden');
         });
 
         // --- SYNCHRONISATION FIREBASE ---
+
         function startFirebaseListener() {
             if (unsubscribeFirebase) unsubscribeFirebase();
 
@@ -298,26 +285,16 @@
             });
         }
 
-        // Calcule l'écart en minutes entre deux chaînes "HH:MM"
-        function getMinutesDiff(start, end) {
-            if (!start || !end) return 0;
+        function calculateDuration(start, end) {
+            if (!start || !end) return "En cours...";
             const [sh, sm] = start.split(':').map(Number);
             const [eh, em] = end.split(':').map(Number);
-            let diff = (eh * 60 + em) - (sh * 60 + sm);
-            if (diff < 0) diff += 24 * 60; // Gestion passage de minuit
-            return diff;
-        }
-
-        function calculateTotalDuration(t1, l1, t2, l2) {
-            if (!t1 || !l2) return "En cours...";
             
-            let totalMin = getMinutesDiff(t1, l1); // Phase 1
-            if (t2 && l2) {
-                totalMin += getMinutesDiff(t2, l2); // + Phase 2
-            }
+            let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+            if (diffMinutes < 0) diffMinutes += 24 * 60;
             
-            const h = Math.floor(totalMin / 60);
-            const m = totalMin % 60;
+            const h = Math.floor(diffMinutes / 60);
+            const m = diffMinutes % 60;
             return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
         }
 
@@ -331,36 +308,22 @@
             emptyState.classList.add('hidden');
 
             flights.forEach((flight) => {
-                const totalDuration = calculateTotalDuration(flight.takeoff, flight.landingSite, flight.takeoffSite, flight.landing);
+                const duration = calculateDuration(flight.takeoff, flight.landing);
                 const totalPob = parseInt(flight.pnt || 0) + parseInt(flight.med || 0) + parseInt(flight.pax || 0);
+                const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
                 const isEnCours = !flight.landing;
                 const authorName = flight.author ? flight.author.split(' ')[0] : 'Inconnu';
 
                 const row = document.createElement('tr');
                 row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/20 border-l-4 border-l-red-500' : ''}`;
-                
-                // Préparation de l'affichage des remarques si elles existent
-                const commentSection = flight.comments ? `<div class="text-xs text-amber-300 mt-1 font-mono max-w-xs truncate" title="${flight.comments}">💬 ${flight.comments}</div>` : '';
-
                 row.innerHTML = `
-                    <td class="p-3 font-medium text-white">
-                        ${flight.callsign} 
-                        <span class="text-xs text-gray-400 block">${flight.immat}</span>
-                    </td>
+                    <td class="p-3 font-medium text-white">${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span></td>
                     <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMissionBadgeClass(flight.mission)}">${flight.mission}</span></td>
-                    <td class="p-3">
-                        <span class="font-bold text-gray-300">${flight.dep} ➔ ${flight.dest}</span>
-                        ${commentSection}
-                    </td>
+                    <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
                     <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
-                    <td class="p-3 text-xs text-gray-300 space-y-0.5">
-                        <div class="text-red-400">🛫 A: ${flight.takeoff || '??'} ➔ 🛬 ${flight.landingSite || '??'}</div>
-                        <div class="text-blue-400">🛫 R: ${flight.takeoffSite || '??'} ➔ 🛬 ${flight.landing || '⏱️ ?'}</div>
-                    </td>
-                    <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">
-                        ${totalDuration}
-                        <span class="text-[10px] text-gray-400 block font-normal italic">par ${authorName}</span>
-                    </td>
+                    <td class="p-3 text-xs text-gray-300">${flight.takeoff || '??'} - <span class="${isEnCours ? 'text-red-400 font-bold animate-pulse' : ''}">${displayLanding}</span></td>
+                    <td class="p-3 text-xs font-medium text-gray-400 italic">${authorName}</td>
+                    <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
                     <td class="p-3 text-right">
                         <div class="flex gap-2 justify-end">
                             <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-2.5 rounded text-xs transition cursor-pointer whitespace-nowrap">
@@ -414,16 +377,10 @@
             document.getElementById('pob-pnt').value = flight.pnt;
             document.getElementById('pob-med').value = flight.med;
             document.getElementById('pob-pax').value = flight.pax;
-            
-            // Chargement des 4 horaires distincts
-            document.getElementById('time-takeoff').value = flight.takeoff || '';
-            document.getElementById('time-landing-site').value = flight.landingSite || '';
-            document.getElementById('time-takeoff-site').value = flight.takeoffSite || '';
-            document.getElementById('time-landing').value = flight.landing || '';
-            
-            document.getElementById('fuel').value = flight.fuel || '';
+            document.getElementById('time-takeoff').value = flight.takeoff;
+            document.getElementById('time-landing').value = flight.landing;
+            document.getElementById('fuel').value = flight.fuel;
             document.getElementById('flight-condition').value = flight.condition;
-            document.getElementById('flight-comments').value = flight.comments || '';
             document.getElementById('flight-author').value = flight.author || '';
 
             formTitle.textContent = "Modifier le Rapport Cloud";
@@ -439,15 +396,19 @@
             const flight = localFlightsCache.find(f => f.id === id);
             if (!flight) return;
 
-            const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer définitivement le vol de la machine "${flight.callsign}" ?`);
+            const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer définitivement le vol de la machine "${flight.callsign}" (${flight.immat}) ?`);
+            
             if (confirmDelete) {
                 syncStatus.textContent = "Suppression...";
                 try {
                     await deleteDoc(doc(db, "vols", id));
-                    if (flightIdInput.value === id) resetForm();
+                    // Si l'utilisateur était en train de modifier le dossier supprimé, on reset le formulaire
+                    if (flightIdInput.value === id) {
+                        resetForm();
+                    }
                 } catch (error) {
                     console.error("Erreur lors de la suppression :", error);
-                    alert("Erreur Cloud lors de la suppression.");
+                    alert("Erreur Cloud lors de la suppression du dossier.");
                 }
             }
         }
@@ -485,16 +446,10 @@
                 pnt: document.getElementById('pob-pnt').value,
                 med: document.getElementById('pob-med').value,
                 pax: document.getElementById('pob-pax').value,
-                
-                // Envoi des structures temporelles séparées
                 takeoff: document.getElementById('time-takeoff').value,
-                landingSite: document.getElementById('time-landing-site').value,
-                takeoffSite: document.getElementById('time-takeoff-site').value,
                 landing: document.getElementById('time-landing').value,
-                
                 fuel: document.getElementById('fuel').value,
                 condition: document.getElementById('flight-condition').value,
-                comments: document.getElementById('flight-comments').value,
                 author: flightAuthor,
                 timestamp: Date.now()
             };
