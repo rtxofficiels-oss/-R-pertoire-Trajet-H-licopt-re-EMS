@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMS Helilog - Registre des Vols</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
+
+    <div class="max-w-6xl mx-auto p-4 sm:p-6">
+        <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-red-500 tracking-wide">🚁 HÉLI-SMUR</h1>
+                <p class="text-sm text-gray-400">Registre opérationnel des vols EMS</p>
+            </div>
+            <div class="text-right">
+                <span id="connection-status" class="px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium">Mode Local Actif</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-1 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700 h-fit">
+                <h2 class="text-xl font-semibold mb-4 text-white border-b border-gray-700 pb-2">Nouveau Vol</h2>
+                <form id="flight-form" class="space-y-4">
+                    
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Indicatif & Machine</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="callsign" placeholder="ex: SAMU 75" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="text" id="immat" placeholder="ex: F-HEMS" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Raison du vol (Mission)</label>
+                        <select id="mission-type" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                            <option value="Primaire">Primaire (Intervention site)</option>
+                            <option value="Secondaire">Secondaire (Transfert Hôpital)</option>
+                            <option value="Technique">Vol Technique / Entraînement</option>
+                            <option value="SAR">Recherche et Sauvetage (SAR)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Itinéraire</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="text" id="dep" placeholder="Départ (OACI/DZ)" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                            <input type="text" id="dest" placeholder="Arrivée" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:outline-none focus:border-red-500">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Personnes à bord (POB)</label>
+                        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div>
+                                <span class="text-gray-400">PNT (Pilotes)</span>
+                                <input type="number" id="pob-pnt" value="1" min="1" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-center mt-1">
+                            </div>
+                            <div>
+                                <span class="text-gray-400">Med (Médical)</span>
+                                <input type="number" id="pob-med" value="2" min="0" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-center mt-1">
+                            </div>
+                            <div>
+                                <span class="text-gray-400">Pax (Patient)</span>
+                                <input type="number" id="pob-pax" value="1" min="0" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white text-center mt-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Horaires (UTC ou Local)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <span class="text-[10px] text-gray-400">Décollage</span>
+                                <input type="time" id="time-takeoff" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
+                            </div>
+                            <div>
+                                <span class="text-[10px] text-gray-400">Atterrissage</span>
+                                <input type="time" id="time-landing" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Carburant (L ou kg)</label>
+                            <input type="number" id="fuel" placeholder="Restant" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Condition</label>
+                            <select id="flight-condition" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
+                                <option value="Jour">Jour (VFR)</option>
+                                <option value="Nuit">Nuit (VFR/IFR)</option>
+                                <option value="JVN">JVN (Jumelles Nuit)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition duration-200 shadow-md cursor-pointer">
+                        Enregistrer le Vol
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
+                <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                    <h2 class="text-xl font-semibold text-white">Registre des Vols (<span id="flight-count">0</span>)</h2>
+                    <button id="clear-btn" class="text-xs bg-gray-700 hover:bg-red-900 text-gray-300 hover:text-white px-3 py-1 rounded transition cursor-pointer">
+                        Effacer tout
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-900 text-gray-400 uppercase text-[11px] tracking-wider border-b border-gray-700">
+                                <th class="p-3">Indicatif/Immat</th>
+                                <th class="p-3">Mission</th>
+                                <th class="p-3">Parcours</th>
+                                <th class="p-3">POB Total</th>
+                                <th class="p-3">Horaires</th>
+                                <th class="p-3">Durée</th>
+                                <th class="p-3">Cond.</th>
+                            </tr>
+                        </thead>
+                        <tbody id="flights-table-body" class="divide-y divide-gray-700 text-sm">
+                            </tbody>
+                    </table>
+                </div>
+                <div id="empty-state" class="text-center py-12 text-gray-500">
+                    Aucun vol enregistré pour le moment.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const flightForm = document.getElementById('flight-form');
+            const tableBody = document.getElementById('flights-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const flightCount = document.getElementById('flight-count');
+            const clearBtn = document.getElementById('clear-btn');
+
+            // Charger les vols sauvegardés au démarrage
+            let flights = JSON.parse(localStorage.getItem('ems_flights')) || [];
+
+            function calculateDuration(start, end) {
+                if (!start || !end) return "--:--";
+                const [sh, sm] = start.split(':').map(Number);
+                const [eh, em] = end.split(':').map(Number);
+                
+                let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+                if (diffMinutes < 0) diffMinutes += 24 * 60; // Gestion passage de minuit
+                
+                const h = Math.floor(diffMinutes / 60);
+                const m = diffMinutes % 60;
+                return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+            }
+
+            function renderFlights() {
+                tableBody.innerHTML = '';
+                flightCount.textContent = flights.length;
+
+                if (flights.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                }
+                emptyState.classList.add('hidden');
+
+                flights.forEach((flight) => {
+                    const duration = calculateDuration(flight.takeoff, flight.landing);
+                    const totalPob = parseInt(flight.pnt) + parseInt(flight.med) + parseInt(flight.pax);
+                    
+                    const row = document.createElement('tr');
+                    row.className = "hover:bg-gray-700/50 transition-colors";
+                    row.innerHTML = `
+                        <td class="p-3 font-medium text-white">${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span></td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMissionBadgeClass(flight.mission)}">${flight.mission}</span></td>
+                        <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
+                        <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
+                        <td class="p-3 text-xs text-gray-300">${flight.takeoff} - ${flight.landing}</td>
+                        <td class="p-3 font-bold text-red-400">${duration}</td>
+                        <td class="p-3"><span class="text-xs text-gray-400">${flight.condition}</span></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            }
+
+            function getMissionBadgeClass(mission) {
+                switch(mission) {
+                    case 'Primaire': return 'bg-red-950 text-red-400 border border-red-800';
+                    case 'Secondaire': return 'bg-blue-950 text-blue-400 border border-blue-800';
+                    case 'SAR': return 'bg-amber-950 text-amber-400 border border-amber-800';
+                    default: return 'bg-gray-900 text-gray-400 border border-gray-700';
+                }
+            }
+
+            // Soumission du formulaire
+            flightForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const newFlight = {
+                    id: Date.now(),
+                    callsign: document.getElementById('callsign').value,
+                    immat: document.getElementById('immat').value,
+                    mission: document.getElementById('mission-type').value,
+                    dep: document.getElementById('dep').value,
+                    dest: document.getElementById('dest').value,
+                    pnt: document.getElementById('pob-pnt').value,
+                    med: document.getElementById('pob-med').value,
+                    pax: document.getElementById('pob-pax').value,
+                    takeoff: document.getElementById('time-takeoff').value,
+                    landing: document.getElementById('time-landing').value,
+                    fuel: document.getElementById('fuel').value,
+                    condition: document.getElementById('flight-condition').value
+                };
+
+                flights.unshift(newFlight); // Ajoute le vol en haut de la liste
+                localStorage.setItem('ems_flights', JSON.stringify(flights));
+                
+                renderFlights();
+                flightForm.reset();
+                // Remettre les POB par défaut après reset
+                document.getElementById('pob-pnt').value = 1;
+                document.getElementById('pob-med').value = 2;
+                document.getElementById('pob-pax').value = 1;
+            });
+
+            // Bouton pour tout vider
+            clearBtn.addEventListener('click', () => {
+                if (confirm('Voulez-vous vraiment effacer tout l\'historique des vols ?')) {
+                    flights = [];
+                    localStorage.removeItem('ems_flights');
+                    renderFlights();
+                }
+            });
+
+            // Initialisation
+            renderFlights();
+        });
+    </script>
+</body>
+</html>
