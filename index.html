@@ -59,9 +59,25 @@
                 <span id="stats-total-primaires" class="text-2xl font-bold text-amber-500">0</span>
             </div>
             <div class="bg-gray-800 border border-gray-700 p-4 rounded-xl shadow-md">
-                <span class="block text-xs text-gray-400 uppercase font-bold">En cours / Alerte</span>
+                <span class="block text-xs text-gray-400 uppercase font-bold">En Vol 🚁</span>
                 <span id="stats-total-encours" class="text-2xl font-bold text-green-400">0</span>
             </div>
+        </div>
+
+        <div class="bg-gray-800 border-2 border-red-600/30 p-4 rounded-xl mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+            <div class="flex items-center gap-3">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <div>
+                    <h3 class="text-sm font-bold text-white uppercase">Départ Immédiat / Alerte</h3>
+                    <p class="text-xs text-gray-400">Enregistre un décollage à la minute actuelle avec les infos du formulaire.</p>
+                </div>
+            </div>
+            <button id="quick-takeoff-btn" type="button" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold text-sm py-2 px-6 rounded-lg shadow transition cursor-pointer flex items-center justify-center gap-2">
+                🚀 Top Décollage Immédiat
+            </button>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -76,6 +92,11 @@
                 <form id="flight-form" class="space-y-4">
                     <input type="hidden" id="flight-id">
                     
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Date du vol</label>
+                        <input type="date" id="flight-date" required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white focus:border-red-500 focus:outline-none">
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Indicatif & Machine</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -124,11 +145,11 @@
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Horaires (Décollage & Posé)</label>
                         <div class="grid grid-cols-2 gap-2">
                             <div>
-                                <span class="text-[10px] text-gray-400 flex justify-between">Décollage <button type="button" class="set-now-time text-red-400 hover:text-white" data-target="time-takeoff">⏱️</button></span>
+                                <span class="text-[10px] text-gray-400 flex justify-between">Décollage <button type="button" class="set-now-time text-red-400 hover:text-white" data-target="time-takeoff">⏱️ Top</button></span>
                                 <input type="time" id="time-takeoff" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                             <div>
-                                <span class="text-[10px] text-gray-400 flex justify-between">Atterrissage <button type="button" class="set-now-time text-red-400 hover:text-white" data-target="time-landing">⏱️</button></span>
+                                <span class="text-[10px] text-gray-400 flex justify-between">Atterrissage <button type="button" class="set-now-time text-red-400 hover:text-white" data-target="time-landing">⏱️ Top</button></span>
                                 <input type="time" id="time-landing" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                         </div>
@@ -136,43 +157,47 @@
 
                     <div class="grid grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Carburant restant</label>
-                            <input type="number" id="fuel" placeholder="Litres/Kg" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Kérosène Départ</label>
+                            <input type="number" id="fuel-start" placeholder="Litres/Kg" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
                         </div>
                         <div>
-                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Condition</label>
-                            <select id="flight-condition" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
-                                <option value="Jour">Jour (VFR)</option>
-                                <option value="Nuit">Nuit (VFR/IFR)</option>
-                                <option value="JVN">JVN (Jumelles)</option>
-                            </select>
+                            <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Kérosène Retour</label>
+                            <input type="number" id="fuel-end" placeholder="Litres/Kg" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
                         </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Condition</label>
+                        <select id="flight-condition" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
+                            <option value="Jour">Jour (VFR)</option>
+                            <option value="Nuit">Nuit (VFR/IFR)</option>
+                            <option value="JVN">JVN (Jumelles)</option>
+                        </select>
                     </div>
 
                     <input type="hidden" id="flight-author">
 
                     <button type="submit" id="submit-btn" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition duration-200 cursor-pointer shadow-md">
-                        Enregistrer le Vol
+                        Enregistrer le Vol / Départ
                     </button>
                 </form>
             </div>
 
             <div class="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
                 <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                    <h2 class="text-xl font-semibold text-white">Rapports Enregistrés (Cloud)</h2>
+                    <h2 class="text-xl font-semibold text-white">Archives de Vol (Suivi Temps Réel)</h2>
                 </div>
 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
                         <thead>
                             <tr class="bg-gray-900 text-gray-400 uppercase text-[11px] tracking-wider border-b border-gray-700">
-                                <th class="p-3">Appareil</th>
+                                <th class="p-3">Date / Appareil</th>
                                 <th class="p-3">Mission</th>
                                 <th class="p-3">Parcours</th>
                                 <th class="p-3">POB</th>
                                 <th class="p-3">Horaires</th>
-                                <th class="p-3">Auteur</th>
-                                <th class="p-3">Durée</th>
+                                <th class="p-3">Durée / Conso</th>
                                 <th class="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -214,13 +239,13 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
+        // UI Selectors
         const loginScreen = document.getElementById('login-screen');
         const appScreen = document.getElementById('app-screen');
         const loginForm = document.getElementById('login-form');
         const loginError = document.getElementById('login-error');
         const userDisplayName = document.getElementById('user-display-name');
         const logoutBtn = document.getElementById('logout-btn');
-
         const flightForm = document.getElementById('flight-form');
         const tableBody = document.getElementById('flights-table-body');
         const emptyState = document.getElementById('empty-state');
@@ -229,13 +254,16 @@
         const submitBtn = document.getElementById('submit-btn');
         const cancelEditBtn = document.getElementById('cancel-edit-btn');
         const flightIdInput = document.getElementById('flight-id');
+        const quickTakeoffBtn = document.getElementById('quick-takeoff-btn');
 
         let currentUser = null;
         let localFlightsCache = [];
         let unsubscribeFirebase = null;
 
+        // Init Date par défaut (Aujourd'hui)
+        document.getElementById('flight-date').value = new Date().toISOString().split('T')[0];
+
         // --- GESTION DES SESSIONS ---
-        
         const savedUserToken = localStorage.getItem('logged_ems_user');
         if (savedUserToken && USERS_DATABASE[savedUserToken]) {
             connectUser(savedUserToken);
@@ -259,33 +287,25 @@
         function connectUser(username) {
             currentUser = USERS_DATABASE[username];
             userDisplayName.textContent = currentUser.name;
-            
             loginScreen.classList.add('hidden');
             appScreen.classList.remove('hidden');
-            
             startFirebaseListener();
         }
 
         logoutBtn.addEventListener('click', () => {
-            if (unsubscribeFirebase) {
-                unsubscribeFirebase();
-                unsubscribeFirebase = null;
-            }
+            if (unsubscribeFirebase) { unsubscribeFirebase(); unsubscribeFirebase = null; }
             localStorage.removeItem('logged_ems_user');
             currentUser = null;
             localFlightsCache = [];
             tableBody.innerHTML = '';
             emptyState.classList.remove('hidden');
-            
             appScreen.classList.add('hidden');
             loginScreen.classList.remove('hidden');
         });
 
         // --- SYNCHRONISATION FIREBASE ---
-
         function startFirebaseListener() {
             if (unsubscribeFirebase) unsubscribeFirebase();
-
             const q = query(collection(db, "vols"), orderBy("timestamp", "desc"));
             
             unsubscribeFirebase = onSnapshot(q, (snapshot) => {
@@ -293,28 +313,27 @@
                 snapshot.forEach((doc) => {
                     localFlightsCache.push({ id: doc.id, ...doc.data() });
                 });
-                
                 syncStatus.textContent = "✓ Connecté au Serveur EMS";
                 syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
                 renderFlights(localFlightsCache);
                 calculateDashboardStats(localFlightsCache);
             }, (error) => {
-                console.error("Erreur Firebase: ", error);
+                console.error(error);
                 syncStatus.textContent = "⚠️ Erreur Synchro";
                 syncStatus.className = "px-3 py-1 bg-red-900 text-red-300 text-xs rounded-full font-medium";
             });
         }
 
-        // --- FONCTIONS PRATIQUES ET UI ---
+        // --- HELPER FUNCTIONS ---
+        function getFormattedTimeNow() {
+            const now = new Date();
+            return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
 
-        // Raccourci pour assigner l'heure courante (HH:MM)
         document.querySelectorAll('.set-now-time').forEach(button => {
             button.addEventListener('click', (e) => {
                 const targetId = e.currentTarget.getAttribute('data-target');
-                const now = new Date();
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                document.getElementById(targetId).value = `${hours}:${minutes}`;
+                document.getElementById(targetId).value = getFormattedTimeNow();
             });
         });
 
@@ -323,12 +342,12 @@
             const [sh, sm] = start.split(':').map(Number);
             const [eh, em] = end.split(':').map(Number);
             let diff = (eh * 60 + em) - (sh * 60 + sm);
-            if (diff < 0) diff += 24 * 60; // Gère le passage de minuit
+            if (diff < 0) diff += 24 * 60;
             return diff;
         }
 
         function calculateDuration(start, end) {
-            if (!start || !end) return "En cours...";
+            if (!start || !end) return "🔴 En Vol...";
             const diffMinutes = calculateMinutes(start, end);
             const h = Math.floor(diffMinutes / 60);
             const m = diffMinutes % 60;
@@ -336,61 +355,94 @@
         }
 
         function calculateDashboardStats(flights) {
-            let totalMinutes = 0;
-            let totalPrimaires = 0;
-            let totalEnCours = 0;
-
+            let totalMinutes = 0; let totalPrimaires = 0; let totalEnCours = 0;
             flights.forEach(f => {
-                if (f.takeoff && f.landing) {
-                    totalMinutes += calculateMinutes(f.takeoff, f.landing);
-                } else {
-                    totalEnCours++;
-                }
+                if (f.takeoff && f.landing) totalMinutes += calculateMinutes(f.takeoff, f.landing);
+                else totalEnCours++;
                 if (f.mission === 'Primaire') totalPrimaires++;
             });
-
-            const h = Math.floor(totalMinutes / 60);
-            const m = totalMinutes % 60;
-
+            const h = Math.floor(totalMinutes / 60); const m = totalMinutes % 60;
             document.getElementById('stats-total-vols').textContent = flights.length;
             document.getElementById('stats-total-heures').textContent = `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
             document.getElementById('stats-total-primaires').textContent = totalPrimaires;
             document.getElementById('stats-total-encours').textContent = totalEnCours;
         }
 
-        function renderFlights(flights) {
-            tableBody.innerHTML = '';
-
-            if (flights.length === 0) {
-                emptyState.classList.remove('hidden');
+        // --- ENREGISTREMENT RAPIDE (DÉPART ALERTE) ---
+        quickTakeoffBtn.addEventListener('click', async () => {
+            if(!document.getElementById('callsign').value || !document.getElementById('dep').value) {
+                alert("Veuillez au moins saisir l'Indicatif, le Départ et l'Arrivée dans le formulaire pour lancer l'alerte !");
                 return;
             }
+            syncStatus.textContent = "Top Alerte...";
+            const flightData = {
+                date: document.getElementById('flight-date').value,
+                callsign: document.getElementById('callsign').value.trim().toUpperCase(),
+                immat: document.getElementById('immat').value.trim().toUpperCase(),
+                mission: document.getElementById('mission-type').value,
+                dep: document.getElementById('dep').value.trim().toUpperCase(),
+                dest: document.getElementById('dest').value.trim().toUpperCase(),
+                pnt: document.getElementById('pob-pnt').value,
+                med: document.getElementById('pob-med').value,
+                pax: document.getElementById('pob-pax').value,
+                takeoff: getFormattedTimeNow(),
+                landing: "", 
+                fuelStart: document.getElementById('fuel-start').value || "0",
+                fuelEnd: "",
+                condition: document.getElementById('flight-condition').value,
+                author: currentUser ? currentUser.name : "Inconnu",
+                timestamp: Date.now()
+            };
+            try {
+                await addDoc(collection(db, "vols"), flightData);
+                resetForm();
+            } catch (e) { alert("Erreur de connexion."); }
+        });
+
+        // --- RENDU DU TABLEAU ---
+        function renderFlights(flights) {
+            tableBody.innerHTML = '';
+            if (flights.length === 0) { emptyState.classList.remove('hidden'); return; }
             emptyState.classList.add('hidden');
 
             flights.forEach((flight) => {
                 const duration = calculateDuration(flight.takeoff, flight.landing);
                 const totalPob = parseInt(flight.pnt || 0) + parseInt(flight.med || 0) + parseInt(flight.pax || 0);
-                const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
                 const isEnCours = !flight.landing;
-                const authorName = flight.author ? flight.author.split(' ')[0] : 'Inconnu';
+                
+                let consoText = "-";
+                if(flight.fuelStart && flight.fuelEnd) {
+                    const diffFuel = parseInt(flight.fuelStart) - parseInt(flight.fuelEnd);
+                    consoText = diffFuel > 0 ? `${diffFuel} kg/L` : "0";
+                }
 
                 const row = document.createElement('tr');
-                row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/20 border-l-4 border-l-red-500' : ''}`;
+                row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/30 border-l-4 border-l-red-500' : ''}`;
                 row.innerHTML = `
-                    <td class="p-3 font-medium text-white">${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span></td>
+                    <td class="p-3 font-medium text-white">
+                        <span class="text-[10px] bg-gray-700 px-1.5 py-0.5 rounded text-gray-300 block w-fit mb-1">${flight.date || '---'}</span>
+                        ${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span>
+                    </td>
                     <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMissionBadgeClass(flight.mission)}">${flight.mission}</span></td>
-                    <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
+                    <td class="p-3 font-medium">${flight.dep} ➔ ${flight.dest}</td>
                     <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
-                    <td class="p-3 text-xs text-gray-300">${flight.takeoff || '??'} - <span class="${isEnCours ? 'text-red-400 font-bold animate-pulse' : ''}">${displayLanding}</span></td>
-                    <td class="p-3 text-xs font-medium text-gray-400 italic">${authorName}</td>
-                    <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
+                    <td class="p-3 text-xs text-gray-300">🛫 ${flight.takeoff || '??'} <br> 🛬 ${flight.landing || 'En Vol'}</td>
+                    <td class="p-3">
+                        <span class="font-bold block ${isEnCours ? 'text-red-400 animate-pulse' : 'text-green-400'}">${duration}</span>
+                        <span class="text-[10px] text-gray-400 block">Conso: ${consoText}</span>
+                    </td>
                     <td class="p-3 text-right">
-                        <div class="flex gap-2 justify-end">
-                            <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-2.5 rounded text-xs transition cursor-pointer whitespace-nowrap">
-                                📝 ${isEnCours ? 'Compléter' : 'Modifier'}
+                        <div class="flex gap-2 justify-end items-center">
+                            ${isEnCours ? `
+                                <button data-id="${flight.id}" class="quick-land-btn bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-2 rounded text-xs transition cursor-pointer whitespace-nowrap shadow">
+                                    🛬 Posé Immédiat
+                                </button>
+                            ` : ''}
+                            <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-2 rounded text-xs transition cursor-pointer">
+                                📝 Éditer
                             </button>
-                            <button data-id="${flight.id}" class="delete-btn bg-red-950 hover:bg-red-600 text-red-400 hover:text-white border border-red-800 hover:border-red-600 font-medium py-1 px-2.5 rounded text-xs transition cursor-pointer whitespace-nowrap">
-                                🗑️ Supprimer
+                            <button data-id="${flight.id}" class="delete-btn bg-red-950 hover:bg-red-600 text-red-400 hover:text-white border border-red-800 rounded text-xs transition cursor-pointer">
+                                🗑️
                             </button>
                         </div>
                     </td>
@@ -398,21 +450,27 @@
                 tableBody.appendChild(row);
             });
 
-            // Événements boutons modifier
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
+            // Bouton Posé Rapide (Retour hélico)
+            document.querySelectorAll('.quick-land-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
-                    editFlight(id);
+                    const timeNow = getFormattedTimeNow();
+                    const flight = localFlightsCache.find(f => f.id === id);
+                    const fuelEndInput = prompt(`Machine posée à ${timeNow}. Saisissez le kérosène restant (facultatif) :`, flight.fuelEnd || "");
+                    
+                    syncStatus.textContent = "Enregistrement retour...";
+                    try {
+                        await updateDoc(doc(db, "vols", id), {
+                            landing: timeNow,
+                            fuelEnd: fuelEndInput || "0"
+                        });
+                    } catch(e) { alert("Erreur."); }
                 });
             });
 
-            // Événements boutons supprimer
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const id = e.currentTarget.getAttribute('data-id');
-                    deleteFlight(id);
-                });
-            });
+            // Modif / Suppr
+            document.querySelectorAll('.edit-btn').forEach(btn => { btn.addEventListener('click', (e) => editFlight(e.currentTarget.getAttribute('data-id'))); });
+            document.querySelectorAll('.delete-btn').forEach(btn => { btn.addEventListener('click', (e) => deleteFlight(e.currentTarget.getAttribute('data-id'))); });
         }
 
         function getMissionBadgeClass(mission) {
@@ -429,6 +487,7 @@
             if (!flight) return;
 
             flightIdInput.value = flight.id;
+            document.getElementById('flight-date').value = flight.date || new Date().toISOString().split('T')[0];
             document.getElementById('callsign').value = flight.callsign;
             document.getElementById('immat').value = flight.immat;
             document.getElementById('mission-type').value = flight.mission;
@@ -439,65 +498,45 @@
             document.getElementById('pob-pax').value = flight.pax;
             document.getElementById('time-takeoff').value = flight.takeoff;
             document.getElementById('time-landing').value = flight.landing;
-            document.getElementById('fuel').value = flight.fuel;
+            document.getElementById('fuel-start').value = flight.fuelStart || '';
+            document.getElementById('fuel-end').value = flight.fuelEnd || '';
             document.getElementById('flight-condition').value = flight.condition;
             document.getElementById('flight-author').value = flight.author || '';
 
-            formTitle.textContent = "Modifier le Rapport Cloud";
+            formTitle.textContent = "Modifier le Rapport Dossier";
             formTitle.className = "text-xl font-semibold text-amber-400";
-            submitBtn.textContent = "Mettre à jour le dossier";
-            submitBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
+            submitBtn.textContent = "Mettre à jour l'archive";
+            submitBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2.5 px-4 rounded transition cursor-pointer";
             cancelEditBtn.classList.remove('hidden');
-            
             formTitle.scrollIntoView({ behavior: 'smooth' });
         }
 
         async function deleteFlight(id) {
             const flight = localFlightsCache.find(f => f.id === id);
-            if (!flight) return;
-
-            const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer définitivement le vol de la machine "${flight.callsign}" (${flight.immat}) ?`);
-            
-            if (confirmDelete) {
-                syncStatus.textContent = "Suppression...";
-                try {
-                    await deleteDoc(doc(db, "vols", id));
-                    if (flightIdInput.value === id) {
-                        resetForm();
-                    }
-                } catch (error) {
-                    console.error("Erreur lors de la suppression :", error);
-                    alert("Erreur Cloud lors de la suppression du dossier.");
-                }
+            if (flight && confirm(`Supprimer définitivement l'archive de vol du ${flight.callsign} ?`)) {
+                try { await deleteDoc(doc(db, "vols", id)); if (flightIdInput.value === id) resetForm(); } catch (e) {}
             }
         }
 
         function resetForm() {
             flightForm.reset();
             flightIdInput.value = '';
+            document.getElementById('flight-date').value = new Date().toISOString().split('T')[0];
             formTitle.textContent = "Nouveau Vol";
             formTitle.className = "text-xl font-semibold text-white";
-            submitBtn.textContent = "Enregistrer le Vol";
-            submitBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
+            submitBtn.textContent = "Enregistrer le Vol / Départ";
+            submitBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition cursor-pointer";
             cancelEditBtn.classList.add('hidden');
-            
-            document.getElementById('pob-pnt').value = 1;
-            document.getElementById('pob-med').value = 2;
-            document.getElementById('pob-pax').value = 1;
         }
 
         cancelEditBtn.addEventListener('click', resetForm);
 
         flightForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            syncStatus.textContent = "Envoi...";
-
+            syncStatus.textContent = "Sauvegarde Cloud...";
             const currentId = flightIdInput.value;
-            const originalAuthor = document.getElementById('flight-author').value;
-            const flightAuthor = currentId ? originalAuthor : (currentUser ? currentUser.name : "Inconnu");
-
-            // Forçage de la mise en majuscule des chaînes texte avant l'envoi
             const flightData = {
+                date: document.getElementById('flight-date').value,
                 callsign: document.getElementById('callsign').value.trim().toUpperCase(),
                 immat: document.getElementById('immat').value.trim().toUpperCase(),
                 mission: document.getElementById('mission-type').value,
@@ -508,24 +547,18 @@
                 pax: document.getElementById('pob-pax').value,
                 takeoff: document.getElementById('time-takeoff').value,
                 landing: document.getElementById('time-landing').value,
-                fuel: document.getElementById('fuel').value,
+                fuelStart: document.getElementById('fuel-start').value || "0",
+                fuelEnd: document.getElementById('fuel-end').value || "0",
                 condition: document.getElementById('flight-condition').value,
-                author: flightAuthor,
+                author: currentId ? document.getElementById('flight-author').value : (currentUser ? currentUser.name : "Inconnu"),
                 timestamp: Date.now()
             };
 
             try {
-                if (currentId) {
-                    const flightRef = doc(db, "vols", currentId);
-                    await updateDoc(flightRef, flightData);
-                } else {
-                    await addDoc(collection(db, "vols"), flightData);
-                }
+                if (currentId) await updateDoc(doc(db, "vols", currentId), flightData);
+                else await addDoc(collection(db, "vols"), flightData);
                 resetForm();
-            } catch (error) {
-                console.error("Erreur de sauvegarde :", error);
-                alert("Erreur Cloud. Vérifiez votre connexion.");
-            }
+            } catch (error) { alert("Erreur réseau."); }
         });
     </script>
 </body>
