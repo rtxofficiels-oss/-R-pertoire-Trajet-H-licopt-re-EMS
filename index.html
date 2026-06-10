@@ -120,7 +120,7 @@
                     <div>
                         <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Itinéraire (Départ requis)</label>
                         <div class="grid grid-cols-2 gap-2">
-                            <input type="text" id="dep" placeholder="Terrain Dép." required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500">
+                            <input type="text" id="dep" value="HÉLIPORT EMS" placeholder="Terrain Dép." required class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500">
                             <input type="text" id="dest" placeholder="Dest. (Optionnel)" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white uppercase focus:border-red-500">
                         </div>
                     </div>
@@ -364,7 +364,7 @@
             const depField = document.getElementById('dep').value;
             
             if(!callsignField || !depField) {
-                alert("Erreur opérationnelle : Veuillez saisir au moins l'Indicatif Machine et la Base de Départ dans le formulaire avant de cliquer sur Décollage Immédiat !");
+                alert("Erreur opérationnelle : Veuillez saisir au moins l'Indicatif Machine dans le formulaire avant de cliquer sur Décollage Immédiat !");
                 return;
             }
 
@@ -441,22 +441,21 @@
                 tableBody.appendChild(row);
             });
 
-            // GESTION DU REtOUR DE L'APPAREIL (L'ATTERRISSAGE EFFECTIF)
+            // GESTION DU RETOUR DE L'APPAREIL (L'ATTERRISSAGE EFFECTIF)
             document.querySelectorAll('.quick-land-btn').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.getAttribute('data-id');
                     const timeNow = getFormattedTimeNow();
                     
-                    // On demande à l'équipage où ils se sont posés au moment de l'atterrissage !
-                    const destinationInput = prompt("🛬 L'hélicoptère s'est posé à l'instant ! Quelle est sa destination réelle (ex: CHU BASE, METZ, LFTW...) ?", "BASE");
-                    if (destinationInput === null) return; // Annulation
+                    const destinationInput = prompt("🛬 L'hélicoptère s'est posé à l'instant ! Quelle est sa destination réelle (ex: CHU BASE, METZ, LFTW...) ?", "HÉLIPORT EMS");
+                    if (destinationInput === null) return; 
 
                     const fuelEndInput = prompt(`Heure enregistrée : ${timeNow}. Saisissez le kérosène restant à l'arrivée (kg/L) :`, "200");
                     
                     syncStatus.textContent = "Archivage du retour...";
                     try {
                         await updateDoc(doc(db, "vols", id), {
-                            dest: destinationInput.trim().toUpperCase() || "BASE",
+                            dest: destinationInput.trim().toUpperCase() || "HÉLIPORT EMS",
                             landing: timeNow,
                             fuelEnd: fuelEndInput || "0"
                         });
@@ -518,6 +517,8 @@
             flightForm.reset();
             flightIdInput.value = '';
             document.getElementById('flight-date').value = new Date().toISOString().split('T')[0];
+            // On remet la valeur par défaut lors du reset du formulaire
+            document.getElementById('dep').value = "HÉLIPORT EMS";
             formTitle.textContent = "Données Mission";
             formTitle.className = "text-xl font-semibold text-white";
             submitBtn.textContent = "Enregistrer la Fiche";
