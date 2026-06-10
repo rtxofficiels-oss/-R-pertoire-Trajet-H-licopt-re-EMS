@@ -156,8 +156,7 @@
                                 <th class="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="flights-table-body" class="divide-y divide-gray-700 text-sm">
-                            </tbody>
+                        <tbody id="flights-table-body" class="divide-y divide-gray-700 text-sm"></tbody>
                     </table>
                 </div>
                 <div id="empty-state" class="text-center py-12 text-gray-500">
@@ -174,8 +173,6 @@
             getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // CONFIGURATION DES UTILISATEURS (ID et MDT)
-        // Vous pouvez modifier la liste ci-dessous pour ajouter vos pilotes / EMS
         const USERS_DATABASE = {
             "pilote01": { mdt: "hems2026", name: "Cpt. Dupont (Pilote)" },
             "pilote02": { mdt: "rotor99", name: "Cpt. Martin (Pilote)" },
@@ -183,7 +180,6 @@
             "admin": { mdt: "admin123", name: "Superviseur Base" }
         };
 
-        // Votre configuration Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBn_d1xloVLLtQ8MS5w82kNt3AydNpRfJo",
             authDomain: "ems-helilog.firebaseapp.com",
@@ -194,12 +190,10 @@
             measurementId: "G-PF3FMG3RXG"
         };
 
-        // Initialisation de Firebase
         const app = initializeApp(firebaseConfig);
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
-        // Sélection des éléments HTML principaux
         const loginScreen = document.getElementById('login-screen');
         const appScreen = document.getElementById('app-screen');
         const loginForm = document.getElementById('login-form');
@@ -218,10 +212,10 @@
 
         let currentUser = null;
         let localFlightsCache = [];
+        let unsubscribeFirebase = null; // Stocke la fonction d'arrêt de l'écoute en direct
 
-        // --- LOGIQUE DE GESTION DES UTILISATEURS ---
+        // --- GESTION DES SESSIONS ---
         
-        // Vérifier si un utilisateur était déjà connecté auparavant
         const savedUserToken = localStorage.getItem('logged_ems_user');
         if (savedUserToken && USERS_DATABASE[savedUserToken]) {
             connectUser(savedUserToken);
@@ -233,13 +227,11 @@
             const mdt = document.getElementById('login-password').value;
 
             if (USERS_DATABASE[username] && USERS_DATABASE[username].mdt === mdt) {
-                // Identifiants corrects !
                 localStorage.setItem('logged_ems_user', username);
                 loginError.classList.add('hidden');
                 loginForm.reset();
                 connectUser(username);
             } else {
-                // Erreur de saisie
                 loginError.classList.remove('hidden');
             }
         });
@@ -248,28 +240,38 @@
             currentUser = USERS_DATABASE[username];
             userDisplayName.textContent = currentUser.name;
             
-            // Masquer l'écran de connexion et afficher l'application
             loginScreen.classList.add('hidden');
             appScreen.classList.remove('hidden');
             
-            // Initialiser l'écoute en temps réel Firebase Firestore
+            // Lancer la synchronisation Firebase une fois l'écran chargé
             startFirebaseListener();
         }
 
         logoutBtn.addEventListener('click', () => {
+            // Couper l'écoute en direct pour éviter les conflits et vider le cache
+            if (unsubscribeFirebase) {
+                unsubscribeFirebase();
+                unsubscribeFirebase = null;
+            }
             localStorage.removeItem('logged_ems_user');
             currentUser = null;
+            localFlightsCache = [];
+            tableBody.innerHTML = '';
+            emptyState.classList.remove('hidden');
+            
             appScreen.classList.add('hidden');
             loginScreen.classList.remove('hidden');
         });
 
-
-        // --- LOGIQUE BASE DE DONNÉES FIREBASE ---
+        // --- SYNCHRONISATION FIREBASE ---
 
         function startFirebaseListener() {
+            // Si une écoute était déjà active, on la coupe proprement d'abord
+            if (unsubscribeFirebase) unsubscribeFirebase();
+
             const q = query(collection(db, "vols"), orderBy("timestamp", "desc"));
             
-            onSnapshot(q, (snapshot) => {
+            unsubscribeFirebase = onSnapshot(q, (snapshot) => {
                 localFlightsCache = [];
                 snapshot.forEach((doc) => {
                     localFlightsCache.push({ id: doc.id, ...doc.data() });
@@ -309,7 +311,7 @@
 
             flights.forEach((flight) => {
                 const duration = calculateDuration(flight.takeoff, flight.landing);
-                const totalPob = parseInt(flight.pnt) + parseInt(flight.med) + parseInt(flight.pax);
+                const totalPob = parseInt(flight.pnt || 0) + parseInt(flight.med || 0) + parseInt(flight.pax || 0);
                 const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
                 const isEnCours = !flight.landing;
                 const authorName = flight.author ? flight.author.split(' ')[0] : 'Inconnu';
@@ -399,10 +401,8 @@
             syncStatus.textContent = "Envoi...";
 
             const currentId = flightIdInput.value;
-
-            // Garder l'auteur d'origine si c'est une modification, ou mettre le membre connecté si c'est un nouveau rapport
             const originalAuthor = document.getElementById('flight-author').value;
-            const flightAuthor = currentId ? originalAuthor : currentUser.name;
+            const flightAuthor = currentId ? originalAuthor : (currentUser ? currentUser.name : "Inconnu");
 
             const flightData = {
                 callsign: document.getElementById('callsign').value,
