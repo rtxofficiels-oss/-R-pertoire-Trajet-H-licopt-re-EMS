@@ -153,6 +153,7 @@
                                 <th class="p-3">POB</th>
                                 <th class="p-3">Horaires</th>
                                 <th class="p-3">Auteur</th>
+                                <th class="p-3">Durée</th>
                                 <th class="p-3 text-right">Actions</th>
                             </tr>
                         </thead>
@@ -170,7 +171,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
         import { 
-            getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy 
+            getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const USERS_DATABASE = {
@@ -212,7 +213,7 @@
 
         let currentUser = null;
         let localFlightsCache = [];
-        let unsubscribeFirebase = null; // Stocke la fonction d'arrêt de l'écoute en direct
+        let unsubscribeFirebase = null;
 
         // --- GESTION DES SESSIONS ---
         
@@ -243,12 +244,10 @@
             loginScreen.classList.add('hidden');
             appScreen.classList.remove('hidden');
             
-            // Lancer la synchronisation Firebase une fois l'écran chargé
             startFirebaseListener();
         }
 
         logoutBtn.addEventListener('click', () => {
-            // Couper l'écoute en direct pour éviter les conflits et vider le cache
             if (unsubscribeFirebase) {
                 unsubscribeFirebase();
                 unsubscribeFirebase = null;
@@ -266,7 +265,6 @@
         // --- SYNCHRONISATION FIREBASE ---
 
         function startFirebaseListener() {
-            // Si une écoute était déjà active, on la coupe proprement d'abord
             if (unsubscribeFirebase) unsubscribeFirebase();
 
             const q = query(collection(db, "vols"), orderBy("timestamp", "desc"));
@@ -327,18 +325,32 @@
                     <td class="p-3 text-xs font-medium text-gray-400 italic">${authorName}</td>
                     <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
                     <td class="p-3 text-right">
-                        <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-3 rounded text-xs transition cursor-pointer">
-                            📝 ${isEnCours ? 'Compléter' : 'Modifier'}
-                        </button>
+                        <div class="flex gap-2 justify-end">
+                            <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-2.5 rounded text-xs transition cursor-pointer whitespace-nowrap">
+                                📝 ${isEnCours ? 'Compléter' : 'Modifier'}
+                            </button>
+                            <button data-id="${flight.id}" class="delete-btn bg-red-950 hover:bg-red-600 text-red-400 hover:text-white border border-red-800 hover:border-red-600 font-medium py-1 px-2.5 rounded text-xs transition cursor-pointer whitespace-nowrap">
+                                🗑️ Supprimer
+                            </button>
+                        </div>
                     </td>
                 `;
                 tableBody.appendChild(row);
             });
 
+            // Événements boutons modifier
             document.querySelectorAll('.edit-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    const id = e.target.getAttribute('data-id');
+                    const id = e.currentTarget.getAttribute('data-id');
                     editFlight(id);
+                });
+            });
+
+            // Événements boutons supprimer
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    deleteFlight(id);
                 });
             });
         }
@@ -378,6 +390,27 @@
             cancelEditBtn.classList.remove('hidden');
             
             formTitle.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteFlight(id) {
+            const flight = localFlightsCache.find(f => f.id === id);
+            if (!flight) return;
+
+            const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer définitivement le vol de la machine "${flight.callsign}" (${flight.immat}) ?`);
+            
+            if (confirmDelete) {
+                syncStatus.textContent = "Suppression...";
+                try {
+                    await deleteDoc(doc(db, "vols", id));
+                    // Si l'utilisateur était en train de modifier le dossier supprimé, on reset le formulaire
+                    if (flightIdInput.value === id) {
+                        resetForm();
+                    }
+                } catch (error) {
+                    console.error("Erreur lors de la suppression :", error);
+                    alert("Erreur Cloud lors de la suppression du dossier.");
+                }
+            }
         }
 
         function resetForm() {
