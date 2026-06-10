@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMS Helilog - Registre des Vols</title>
+    <title>EMS Helilog - Registre des Vols (Firebase)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 font-sans min-h-screen">
@@ -12,10 +12,10 @@
         <header class="mb-8 border-b border-gray-800 pb-4 flex justify-between items-center">
             <div>
                 <h1 class="text-3xl font-bold text-red-500 tracking-wide">🚁 HÉLI-SMUR</h1>
-                <p class="text-sm text-gray-400">Registre opérationnel - Option Modification Active</p>
+                <p class="text-sm text-gray-400">Registre opérationnel - Connecté à Firebase Cloud</p>
             </div>
             <div class="text-right">
-                <span class="px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium">Sauvegarde Auto</span>
+                <span id="sync-status" class="px-3 py-1 bg-amber-900 text-amber-300 text-xs rounded-full font-medium animate-pulse">Connexion Firebase...</span>
             </div>
         </header>
 
@@ -87,7 +87,6 @@
                                 <input type="time" id="time-landing" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white mt-1">
                             </div>
                         </div>
-                        <p class="text-[11px] text-gray-500 mt-1">Astuce : Laissez l'atterrissage vide si le vol est en cours, modifiez-le au retour.</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-2">
@@ -98,7 +97,7 @@
                         <div>
                             <label class="block text-xs font-bold uppercase text-gray-400 mb-1">Condition</label>
                             <select id="flight-condition" class="w-full bg-gray-700 border border-gray-600 rounded p-2 text-white">
-                                <option value="Running">Jour (VFR)</option>
+                                <option value="Jour">Jour (VFR)</option>
                                 <option value="Nuit">Nuit (VFR/IFR)</option>
                                 <option value="JVN">JVN (Jumelles)</option>
                             </select>
@@ -113,10 +112,7 @@
 
             <div class="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-xl border border-gray-700">
                 <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
-                    <h2 class="text-xl font-semibold text-white">Rapports Enregistrés</h2>
-                    <button id="clear-btn" class="text-xs bg-gray-700 hover:bg-red-950 text-gray-300 hover:text-white px-3 py-1 rounded transition cursor-pointer">
-                        Effacer tout
-                    </button>
+                    <h2 class="text-xl font-semibold text-white">Rapports Enregistrés (Cloud)</h2>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -137,177 +133,213 @@
                     </table>
                 </div>
                 <div id="empty-state" class="text-center py-12 text-gray-500">
-                    Aucun rapport pour le moment.
+                    Aucun rapport dans la base de données.
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const flightForm = document.getElementById('flight-form');
-            const tableBody = document.getElementById('flights-table-body');
-            const emptyState = document.getElementById('empty-state');
-            const clearBtn = document.getElementById('clear-btn');
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+        import { 
+            getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, query, orderBy 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Votre configuration Firebase fournie
+        const firebaseConfig = {
+            apiKey: "AIzaSyBn_d1xloVLLtQ8MS5w82kNt3AydNpRfJo",
+            authDomain: "ems-helilog.firebaseapp.com",
+            projectId: "ems-helilog",
+            storageBucket: "ems-helilog.firebasestorage.app",
+            messagingSenderId: "36937165156",
+            appId: "1:36937165156:web:944bd522693dbdacbeb271",
+            measurementId: "G-PF3FMG3RXG"
+        };
+
+        // Initialisation de Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // Sélection des éléments HTML
+        const flightForm = document.getElementById('flight-form');
+        const tableBody = document.getElementById('flights-table-body');
+        const emptyState = document.getElementById('empty-state');
+        const syncStatus = document.getElementById('sync-status');
+        const formTitle = document.getElementById('form-title');
+        const submitBtn = document.getElementById('submit-btn');
+        const cancelEditBtn = document.getElementById('cancel-edit-btn');
+        const flightIdInput = document.getElementById('flight-id');
+
+        let localFlightsCache = [];
+
+        // Récupération des données en temps réel depuis Firebase Cloud Firestore
+        const q = query(collection(db, "vols"), orderBy("timestamp", "desc"));
+        
+        onSnapshot(q, (snapshot) => {
+            localFlightsCache = [];
+            snapshot.forEach((doc) => {
+                localFlightsCache.push({ id: doc.id, ...doc.data() });
+            });
             
-            // Éléments d'édition
-            const formTitle = document.getElementById('form-title');
-            const submitBtn = document.getElementById('submit-btn');
-            const cancelEditBtn = document.getElementById('cancel-edit-btn');
-            const flightIdInput = document.getElementById('flight-id');
+            // Mise à jour de l'interface
+            syncStatus.textContent = "✓ Connecté au Cloud";
+            syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
+            renderFlights(localFlightsCache);
+        }, (error) => {
+            console.error("Erreur Firebase: ", error);
+            syncStatus.textContent = "⚠️ Erreur Synchro";
+            syncStatus.className = "px-3 py-1 bg-red-900 text-red-300 text-xs rounded-full font-medium";
+        });
 
-            let flights = JSON.parse(localStorage.getItem('ems_flights')) || [];
+        // Calcul de la durée du vol
+        function calculateDuration(start, end) {
+            if (!start || !end) return "En cours...";
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            
+            let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
+            if (diffMinutes < 0) diffMinutes += 24 * 60;
+            
+            const h = Math.floor(diffMinutes / 60);
+            const m = diffMinutes % 60;
+            return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+        }
 
-            function calculateDuration(start, end) {
-                if (!start || !end) return "En cours...";
-                const [sh, sm] = start.split(':').map(Number);
-                const [eh, em] = end.split(':').map(Number);
-                
-                let diffMinutes = (eh * 60 + em) - (sh * 60 + sm);
-                if (diffMinutes < 0) diffMinutes += 24 * 60; // Passage de minuit
-                
-                const h = Math.floor(diffMinutes / 60);
-                const m = diffMinutes % 60;
-                return `${String(h).padStart(2, '0')}h${String(m).padStart(2, '0')}`;
+        // Affichage des données dans le tableau HTML
+        function renderFlights(flights) {
+            tableBody.innerHTML = '';
+
+            if (flights.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
             }
+            emptyState.classList.add('hidden');
 
-            window.editFlight = function(id) {
-                const flight = flights.find(f => f.id === id);
-                if (!flight) return;
+            flights.forEach((flight) => {
+                const duration = calculateDuration(flight.takeoff, flight.landing);
+                const totalPob = parseInt(flight.pnt) + parseInt(flight.med) + parseInt(flight.pax);
+                const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
+                const isEnCours = !flight.landing;
 
-                // Remplir le formulaire avec l'ancien rapport
-                flightIdInput.value = flight.id;
-                document.getElementById('callsign').value = flight.callsign;
-                document.getElementById('immat').value = flight.immat;
-                document.getElementById('mission-type').value = flight.mission;
-                document.getElementById('dep').value = flight.dep;
-                document.getElementById('dest').value = flight.dest;
-                document.getElementById('pob-pnt').value = flight.pnt;
-                document.getElementById('pob-med').value = flight.med;
-                document.getElementById('pob-pax').value = flight.pax;
-                document.getElementById('time-takeoff').value = flight.takeoff;
-                document.getElementById('time-landing').value = flight.landing; // Permet de mettre l'heure de fin ici
-                document.getElementById('fuel').value = flight.fuel;
-                document.getElementById('flight-condition').value = flight.condition;
+                const row = document.createElement('tr');
+                row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/20 border-l-4 border-l-red-500' : ''}`;
+                row.innerHTML = `
+                    <td class="p-3 font-medium text-white">${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMissionBadgeClass(flight.mission)}">${flight.mission}</span></td>
+                    <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
+                    <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
+                    <td class="p-3 text-xs text-gray-300">${flight.takeoff || '??'} - <span class="${isEnCours ? 'text-red-400 font-bold animate-pulse' : ''}">${displayLanding}</span></td>
+                    <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
+                    <td class="p-3 text-right">
+                        <button data-id="${flight.id}" class="edit-btn bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-3 rounded text-xs transition cursor-pointer">
+                            📝 ${isEnCours ? 'Compléter' : 'Modifier'}
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
 
-                // Changer le style du formulaire pour montrer qu'on est en édition
-                formTitle.textContent = "Modifier le Rapport";
-                formTitle.className = "text-xl font-semibold text-amber-400";
-                submitBtn.textContent = "Mettre à jour le vol";
-                submitBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
-                cancelEditBtn.classList.remove('hidden');
-                
-                // Scroll fluide vers le formulaire (pratique sur mobile)
-                formTitle.scrollIntoView({ behavior: 'smooth' });
+            // Attacher les événements sur les boutons de modification
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.target.getAttribute('data-id');
+                    editFlight(id);
+                });
+            });
+        }
+
+        function getMissionBadgeClass(mission) {
+            switch(mission) {
+                case 'Primaire': return 'bg-red-950 text-red-400 border border-red-800';
+                case 'Secondaire': return 'bg-blue-950 text-blue-400 border border-blue-800';
+                case 'SAR': return 'bg-amber-950 text-amber-400 border border-amber-800';
+                default: return 'bg-gray-900 text-gray-400 border border-gray-700';
+            }
+        }
+
+        // Préparer le formulaire pour la modification
+        function editFlight(id) {
+            const flight = localFlightsCache.find(f => f.id === id);
+            if (!flight) return;
+
+            flightIdInput.value = flight.id;
+            document.getElementById('callsign').value = flight.callsign;
+            document.getElementById('immat').value = flight.immat;
+            document.getElementById('mission-type').value = flight.mission;
+            document.getElementById('dep').value = flight.dep;
+            document.getElementById('dest').value = flight.dest;
+            document.getElementById('pob-pnt').value = flight.pnt;
+            document.getElementById('pob-med').value = flight.med;
+            document.getElementById('pob-pax').value = flight.pax;
+            document.getElementById('time-takeoff').value = flight.takeoff;
+            document.getElementById('time-landing').value = flight.landing;
+            document.getElementById('fuel').value = flight.fuel;
+            document.getElementById('flight-condition').value = flight.condition;
+
+            formTitle.textContent = "Modifier le Rapport Cloud";
+            formTitle.className = "text-xl font-semibold text-amber-400";
+            submitBtn.textContent = "Mettre à jour sur Firebase";
+            submitBtn.className = "w-full bg-amber-500 hover:bg-amber-600 text-gray-900 font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
+            cancelEditBtn.classList.remove('hidden');
+            
+            formTitle.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            flightForm.reset();
+            flightIdInput.value = '';
+            formTitle.textContent = "Nouveau Vol";
+            formTitle.className = "text-xl font-semibold text-white";
+            submitBtn.textContent = "Enregistrer le Vol";
+            submitBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
+            cancelEditBtn.classList.add('hidden');
+            
+            document.getElementById('pob-pnt').value = 1;
+            document.getElementById('pob-med').value = 2;
+            document.getElementById('pob-pax').value = 1;
+        }
+
+        cancelEditBtn.addEventListener('click', resetForm);
+
+        // Envoi ou Mise à jour des données dans Firebase Firestore
+        flightForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            syncStatus.textContent = "Envoi...";
+
+            const currentId = flightIdInput.value;
+
+            const flightData = {
+                callsign: document.getElementById('callsign').value,
+                immat: document.getElementById('immat').value,
+                mission: document.getElementById('mission-type').value,
+                dep: document.getElementById('dep').value,
+                dest: document.getElementById('dest').value,
+                pnt: document.getElementById('pob-pnt').value,
+                med: document.getElementById('pob-med').value,
+                pax: document.getElementById('pob-pax').value,
+                takeoff: document.getElementById('time-takeoff').value,
+                landing: document.getElementById('time-landing').value,
+                fuel: document.getElementById('fuel').value,
+                condition: document.getElementById('flight-condition').value,
+                timestamp: Date.now() // Utilisé pour trier l'affichage (du plus récent au plus ancien)
             };
 
-            function resetForm() {
-                flightForm.reset();
-                flightIdInput.value = '';
-                formTitle.textContent = "Nouveau Vol";
-                formTitle.className = "text-xl font-semibold text-white";
-                submitBtn.textContent = "Enregistrer le Vol";
-                submitBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded transition cursor-pointer shadow-md";
-                cancelEditBtn.classList.add('hidden');
-                
-                // Valeurs par défaut
-                document.getElementById('pob-pnt').value = 1;
-                document.getElementById('pob-med').value = 2;
-                document.getElementById('pob-pax').value = 1;
-            }
-
-            cancelEditBtn.addEventListener('click', resetForm);
-
-            function renderFlights() {
-                tableBody.innerHTML = '';
-
-                if (flights.length === 0) {
-                    emptyState.classList.remove('hidden');
-                    return;
-                }
-                emptyState.classList.add('hidden');
-
-                flights.forEach((flight) => {
-                    const duration = calculateDuration(flight.takeoff, flight.landing);
-                    const totalPob = parseInt(flight.pnt) + parseInt(flight.med) + parseInt(flight.pax);
-                    const displayLanding = flight.landing ? flight.landing : "⏱️ ?";
-                    const isEnCours = !flight.landing;
-
-                    const row = document.createElement('tr');
-                    row.className = `hover:bg-gray-700/50 transition-colors ${isEnCours ? 'bg-red-950/20 border-l-4 border-l-red-500' : ''}`;
-                    row.innerHTML = `
-                        <td class="p-3 font-medium text-white">${flight.callsign} <span class="text-xs text-gray-400 block">${flight.immat}</span></td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMissionBadgeClass(flight.mission)}">${flight.mission}</span></td>
-                        <td class="p-3">${flight.dep} ➔ ${flight.dest}</td>
-                        <td class="p-3 text-center font-semibold text-gray-300">${totalPob} <span class="text-[10px] text-gray-500 block">(${flight.pnt}/${flight.med}/${flight.pax})</span></td>
-                        <td class="p-3 text-xs text-gray-300">${flight.takeoff || '??'} - <span class="${isEnCours ? 'text-red-400 font-bold animate-pulse' : ''}">${displayLanding}</span></td>
-                        <td class="p-3 font-bold ${isEnCours ? 'text-gray-500 italic' : 'text-red-400'}">${duration}</td>
-                        <td class="p-3 text-right">
-                            <button onclick="editFlight(${flight.id})" class="bg-gray-700 hover:bg-amber-500 text-gray-300 hover:text-gray-900 font-medium py-1 px-3 rounded text-xs transition cursor-pointer">
-                                📝 ${isEnCours ? 'Compléter' : 'Modifier'}
-                            </button>
-                        </td>
-                    `;
-                    tableBody.appendChild(row);
-                });
-            }
-
-            function getMissionBadgeClass(mission) {
-                switch(mission) {
-                    case 'Primaire': return 'bg-red-950 text-red-400 border border-red-800';
-                    case 'Secondaire': return 'bg-blue-950 text-blue-400 border border-blue-800';
-                    case 'SAR': return 'bg-amber-950 text-amber-400 border border-amber-800';
-                    default: return 'bg-gray-900 text-gray-400 border border-gray-700';
-                }
-            }
-
-            flightForm.addEventListener('submit', (e) => {
-                e.preventDefault();
-
-                const currentId = flightIdInput.value;
-
-                const flightData = {
-                    callsign: document.getElementById('callsign').value,
-                    immat: document.getElementById('immat').value,
-                    mission: document.getElementById('mission-type').value,
-                    dep: document.getElementById('dep').value,
-                    dest: document.getElementById('dest').value,
-                    pnt: document.getElementById('pob-pnt').value,
-                    med: document.getElementById('pob-med').value,
-                    pax: document.getElementById('pob-pax').value,
-                    takeoff: document.getElementById('time-takeoff').value,
-                    landing: document.getElementById('time-landing').value,
-                    fuel: document.getElementById('fuel').value,
-                    condition: document.getElementById('flight-condition').value
-                };
-
+            try {
                 if (currentId) {
-                    // MODE MODIFICATION : On met à jour le vol existant
-                    const index = flights.findIndex(f => f.id == currentId);
-                    if (index !== -1) {
-                        flights[index] = { ...flights[index], ...flightData };
-                    }
+                    // Si l'ID existe, on met à jour le document correspondant dans Firebase
+                    const flightRef = doc(db, "vols", currentId);
+                    await updateDoc(flightRef, flightData);
                 } else {
-                    // MODE CRÉATION : On ajoute un nouveau vol
-                    flightData.id = Date.now();
-                    flights.unshift(flightData);
+                    // Sinon, on crée une nouvelle entrée (un nouveau document)
+                    await addDoc(collection(db, "vols"), flightData);
                 }
-
-                localStorage.setItem('ems_flights', JSON.stringify(flights));
-                renderFlights();
                 resetForm();
-            });
-
-            clearBtn.addEventListener('click', () => {
-                if (confirm('Voulez-vous vraiment effacer tout l\'historique des vols ?')) {
-                    flights = [];
-                    localStorage.removeItem('ems_flights');
-                    renderFlights();
-                    resetForm();
-                }
-            });
-
-            renderFlights();
+            } catch (error) {
+                console.error("Erreur lors de la sauvegarde :", error);
+                alert("Erreur de sauvegarde Cloud. Vérifiez les règles Firestore.");
+            }
         });
     </script>
 </body>
