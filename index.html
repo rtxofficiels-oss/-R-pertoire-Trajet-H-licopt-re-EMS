@@ -275,7 +275,7 @@
                     localFlightsCache.push({ id: doc.id, ...doc.data() });
                 });
                 
-                syncStatus.textContent = "✓ Connecté au Cloud";
+                syncStatus.textContent = "✓ Connecté au Serveur EMS";
                 syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
                 renderFlights(localFlightsCache);
             }, (error) => {
