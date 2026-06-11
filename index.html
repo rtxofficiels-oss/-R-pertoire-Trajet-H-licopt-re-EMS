@@ -222,7 +222,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
         import { 
-            getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy 
+            getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, query, orderBy,
+            enableIndexedDbPersistence 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const USERS_DATABASE = {
@@ -246,6 +247,19 @@
         const analytics = getAnalytics(app);
         const db = getFirestore(app);
 
+        // Activer la persistance hors-ligne Firestore
+        try {
+            enableIndexedDbPersistence(db).catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn("La persistance Firestore a échoué (plusieurs onglets ouverts).");
+                } else if (err.code == 'unimplemented') {
+                    console.warn("Le navigateur actuel ne supporte pas la persistance Firestore.");
+                }
+            });
+        } catch (e) {
+            console.error("Erreur d'activation de la persistance :", e);
+        }
+
         // UI Selectors
         const loginScreen = document.getElementById('login-screen');
         const appScreen = document.getElementById('app-screen');
@@ -268,24 +282,41 @@
         const tabArchives = document.getElementById('tab-archives');
 
         let currentUser = null;
-        let localFlightsCache = [];
+        
+        // Charger le cache des vols depuis localStorage si disponible pour éviter les disparitions au rafraîchissement
+        let localFlightsCache = JSON.parse(localStorage.getItem('ems_flights_cache') || '[]');
         let unsubscribeFirebase = null;
-        let currentTab = 'fleet'; // Peut être 'fleet' (en vol) ou 'archives' (finis)
+        
+        // Charger l'onglet actif sauvegardé
+        let currentTab = localStorage.getItem('ems_active_tab') || 'fleet';
 
         // --- GESTION DES ONGLETS ---
+        function updateTabUI() {
+            if (currentTab === 'fleet') {
+                tabFleet.className = "py-2 px-4 font-semibold text-sm border-b-2 border-red-500 text-white transition cursor-pointer";
+                tabArchives.className = "py-2 px-4 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition cursor-pointer";
+            } else {
+                tabArchives.className = "py-2 px-4 font-semibold text-sm border-b-2 border-red-500 text-white transition cursor-pointer";
+                tabFleet.className = "py-2 px-4 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition cursor-pointer";
+            }
+        }
+
         tabFleet.addEventListener('click', () => {
             currentTab = 'fleet';
-            tabFleet.className = "py-2 px-4 font-semibold text-sm border-b-2 border-red-500 text-white transition cursor-pointer";
-            tabArchives.className = "py-2 px-4 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition cursor-pointer";
+            localStorage.setItem('ems_active_tab', 'fleet');
+            updateTabUI();
             renderFlights(localFlightsCache);
         });
 
         tabArchives.addEventListener('click', () => {
             currentTab = 'archives';
-            tabArchives.className = "py-2 px-4 font-semibold text-sm border-b-2 border-red-500 text-white transition cursor-pointer";
-            tabFleet.className = "py-2 px-4 font-semibold text-sm border-b-2 border-transparent text-gray-400 hover:text-white transition cursor-pointer";
+            localStorage.setItem('ems_active_tab', 'archives');
+            updateTabUI();
             renderFlights(localFlightsCache);
         });
+
+        // Appliquer l'onglet initial sauvegardé au chargement
+        updateTabUI();
 
         // Date du jour par défaut
         document.getElementById('flight-date').value = new Date().toISOString().split('T')[0];
@@ -312,12 +343,19 @@
             userDisplayName.textContent = currentUser.name;
             loginScreen.classList.add('hidden');
             appScreen.classList.remove('hidden');
+            
+            // Afficher immédiatement les données locales au démarrage pour éviter l'écran blanc
+            renderFlights(localFlightsCache);
+            calculateDashboardStats(localFlightsCache);
+            
             startFirebaseListener();
         }
 
         logoutBtn.addEventListener('click', () => {
             if (unsubscribeFirebase) { unsubscribeFirebase(); unsubscribeFirebase = null; }
             localStorage.removeItem('logged_ems_user');
+            localStorage.removeItem('ems_flights_cache');
+            localStorage.removeItem('ems_active_tab');
             currentUser = null;
             localFlightsCache = [];
             tableBody.innerHTML = '';
@@ -333,17 +371,26 @@
             unsubscribeFirebase = onSnapshot(q, (snapshot) => {
                 localFlightsCache = [];
                 snapshot.forEach((doc) => { localFlightsCache.push({ id: doc.id, ...doc.data() }); });
+                
+                // Mettre à jour le cache local
+                localStorage.setItem('ems_flights_cache', JSON.stringify(localFlightsCache));
+                
                 syncStatus.textContent = "✓ Connecté au Serveur EMS";
                 syncStatus.className = "px-3 py-1 bg-green-900 text-green-300 text-xs rounded-full font-medium";
                 renderFlights(localFlightsCache);
                 calculateDashboardStats(localFlightsCache);
             }, (error) => {
-                syncStatus.textContent = "⚠️ Erreur Synchro";
+                console.error("Erreur Firebase :", error);
+                syncStatus.textContent = "⚠️ Mode Hors-ligne / Erreur Synchro";
                 syncStatus.className = "px-3 py-1 bg-red-900 text-red-300 text-xs rounded-full font-medium";
+                
+                // Si Firebase échoue ou qu'on est hors-ligne, on continue d'afficher les fiches locales
+                renderFlights(localFlightsCache);
+                calculateDashboardStats(localFlightsCache);
             });
         }
 
-        // --- SOUCHIER LE FORMULAIRE MANUELLEMENT ---
+        // --- ENREGISTRER LE FORMULAIRE ---
         flightForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             syncStatus.textContent = "Transmission...";
@@ -376,7 +423,23 @@
                 }
                 resetForm();
             } catch(err) {
-                alert("Erreur d'enregistrement");
+                console.error("Firestore write error, saving locally:", err);
+                
+                // Fallback local en cas d'erreur de serveur/droits expirés
+                if (id) {
+                    const idx = localFlightsCache.findIndex(f => f.id === id);
+                    if (idx !== -1) {
+                        localFlightsCache[idx] = { id, ...flightData };
+                    }
+                } else {
+                    const tempId = 'local_' + Date.now();
+                    localFlightsCache.unshift({ id: tempId, ...flightData });
+                }
+                localStorage.setItem('ems_flights_cache', JSON.stringify(localFlightsCache));
+                renderFlights(localFlightsCache);
+                calculateDashboardStats(localFlightsCache);
+                resetForm();
+                alert("⚠️ Note: Enregistré localement sur votre appareil (Serveur injoignable ou droits expirés)");
             }
         });
 
@@ -451,7 +514,19 @@
                 author: currentUser ? currentUser.name : "Inconnu",
                 timestamp: Date.now()
             };
-            try { await addDoc(collection(db, "vols"), flightData); resetForm(); } catch (e) { alert("Erreur réseau"); }
+            try { 
+                await addDoc(collection(db, "vols"), flightData); 
+                resetForm(); 
+            } catch (e) {
+                console.error("Firestore quick takeoff failed, saving locally:", e);
+                const tempId = 'local_' + Date.now();
+                localFlightsCache.unshift({ id: tempId, ...flightData });
+                localStorage.setItem('ems_flights_cache', JSON.stringify(localFlightsCache));
+                renderFlights(localFlightsCache);
+                calculateDashboardStats(localFlightsCache);
+                resetForm();
+                alert("⚠️ Note: Décollage enregistré localement");
+            }
         });
 
         // --- AFFICHAGE DU REGISTRE DES VOLS ---
@@ -527,13 +602,29 @@
                     const fuelEndInput = prompt(`Heure enregistrée : ${timeNow}. Saisissez le kérosène restant à l'arrivée (kg/L) :`, "200");
                     
                     syncStatus.textContent = "Archivage du retour...";
+                    
+                    const destVal = destinationInput.trim().toUpperCase() || "HÉLIPORT EMS";
+                    const fuelEndVal = fuelEndInput || "0";
+                    
                     try {
                         await updateDoc(doc(db, "vols", id), {
-                            dest: destinationInput.trim().toUpperCase() || "HÉLIPORT EMS",
+                            dest: destVal,
                             landing: timeNow,
-                            fuelEnd: fuelEndInput || "0"
+                            fuelEnd: fuelEndVal
                         });
-                    } catch(e) { alert("Erreur de mise à jour"); }
+                    } catch(err) {
+                        console.error("Firestore land update failed, updating locally:", err);
+                        const flight = localFlightsCache.find(f => f.id === id);
+                        if (flight) {
+                            flight.dest = destVal;
+                            flight.landing = timeNow;
+                            flight.fuelEnd = fuelEndVal;
+                            localStorage.setItem('ems_flights_cache', JSON.stringify(localFlightsCache));
+                            renderFlights(localFlightsCache);
+                            calculateDashboardStats(localFlightsCache);
+                        }
+                        alert("⚠️ Note: Enregistré localement");
+                    }
                 });
             });
 
@@ -583,7 +674,18 @@
         async function deleteFlight(id) {
             const flight = localFlightsCache.find(f => f.id === id);
             if (flight && confirm(`Supprimer définitivement ce vol (${flight.callsign}) des archives Cloud ?`)) {
-                try { await deleteDoc(doc(db, "vols", id)); if (flightIdInput.value === id) resetForm(); } catch (e) {}
+                try { 
+                    await deleteDoc(doc(db, "vols", id)); 
+                    if (flightIdInput.value === id) resetForm(); 
+                } catch (e) {
+                    console.error("Firestore delete failed, deleting locally:", e);
+                    localFlightsCache = localFlightsCache.filter(f => f.id !== id);
+                    localStorage.setItem('ems_flights_cache', JSON.stringify(localFlightsCache));
+                    renderFlights(localFlightsCache);
+                    calculateDashboardStats(localFlightsCache);
+                    if (flightIdInput.value === id) resetForm();
+                    alert("⚠️ Note: Supprimé localement");
+                }
             }
         }
 
